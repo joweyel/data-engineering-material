@@ -32,4 +32,4 @@ My study material to the Data Engineering class by DataTalks.Club.
 - Google Cloud SDK
 - Terraform
 
-<img width="503" alt="arch_2" src="https://github.com/joweyel/data-engineering-material/assets/50589933/741a098e-76c8-4e49-9921-b3693ebe4b01">
+![arch](https://github.com/joweyel/data-engineering-material/assets/50589933/b2a0b267-4cd1-437f-8b65-012b01c96838)
