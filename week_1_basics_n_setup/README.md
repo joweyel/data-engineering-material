@@ -8,6 +8,8 @@
 - Preparing the environment for the course
 - Homework
 
+# 1 Docker and SQL
+
 ## 1.2.1 Introduction to Docker
 
 - Docker allows to run software in isolated containers where all relevant dependencies are installed
@@ -253,6 +255,11 @@ With both database and pgAdmin running in the same network you can reopen [http:
 1. `General`: Name the server "Docker localhost"
 2. `Connection`: set Host name/address to "pg-database" + set username and password to "root" (as specified before)
 
+<div style="display: flex; justify-content: space-between;">
+    <img src="1_docker_sql/imgs/server_1_general.png" alt="General" style="width: 48%;">
+    <img src="1_docker_sql/imgs/server_2_Connection.png" alt="Connection" style="width: 48%;">
+</div>
+
 
 After saving the configuration the database from the postgres-container will be available:
 ![pgadmin_docker](1_docker_sql/imgs/pgadmin_docker.png)
@@ -392,6 +399,9 @@ services:
 To use the configuration-file, use the follwing command:
 ```bash
 docker-compose up
+
+# In detached-mode (runs in background, does not block console)
+docker-compose up -d
 ```
 
 During configuration of the postgres-database connection everything stays basically the same and the host-name must be the name of the database-service in the docker-compose config (`pgdatabase`). 
@@ -426,4 +436,188 @@ services:
 ```
 
 ## 1.2.6 - SQL Refresher
-- **TODO**
+Start pgadmin and the postgres-database with:
+```bash
+docker-compose up
+```
+
+In this section the lookup table for Taxi-Zones is also added to the datbase. The code can be found in the data-upload [notebook](1_docker_sql/upload-data.ipynb).
+
+Lets refresh our SQL-knowledge:
+
+Showing the `zones`-table:
+```sql
+SELECT
+  * 
+FROM 
+	zones;
+```
+
+Showing the first 100 rows of the `yellow_taxi_trips`-table:
+```sql
+SELECT
+	* 
+FROM 
+	yellow_taxi_trips
+LIMIT
+	100;
+```
+
+Next step is to join the `yellow_taxi_trips` and `zones` in order to map the numerical values of `PULocationID` and `DOLocationID` to the Zone-names.
+
+- Reference: https://www.w3schools.com/sql/sql_ref_join.asp
+
+On way of doing this is the following:
+```sql
+-- Inner JOIN by hand
+SELECT
+	tpep_pickup_datetime,
+	tpep_dropoff_datetime,
+	total_amount,
+	CONCAT(zpu."Borough", ' / ', zpu."Zone") AS "pickup_loc",
+	CONCAT(zdo."Borough", ' / ', zdo."Zone") AS "dropoff_loc"
+		
+FROM 
+	yellow_taxi_trips AS t,
+	zones AS zpu,
+	zones AS zdo
+WHERE
+	t."PULocationID" = zpu."LocationID" AND
+	t."DOLocationID" = zdo."LocationID"
+LIMIT
+	100;
+```
+
+Another way is:
+```sql
+-- Using JOIN explicitely
+SELECT
+	tpep_pickup_datetime,
+	tpep_dropoff_datetime,
+	total_amount,
+	CONCAT(zpu."Borough", ' / ', zpu."Zone") AS "pickup_loc",
+	CONCAT(zdo."Borough", ' / ', zdo."Zone") AS "dropoff_loc"
+FROM 
+	yellow_taxi_trips AS t 
+	JOIN zones AS zpu
+		ON t."PULocationID" = zpu."LocationID"
+	JOIN zones AS zdo
+		ON t."DOLocationID" = zdo."LocationID"
+LIMIT
+	100;
+```
+
+Checking if some location ID's are missing:
+```sql
+--- Check Pickup-Location ID
+SELECT
+	tpep_pickup_datetime,
+	tpep_dropoff_datetime,
+	total_amount,
+	"PULocationID",
+	"DOLocationID"
+FROM 
+	yellow_taxi_trips AS t 
+WHERE
+	"PULocationID" NOT IN (SELECT "LocationID" FROM zones)
+LIMIT
+	100;
+```
+
+```sql
+--- Check Dropoff-Location ID
+SELECT
+	tpep_pickup_datetime,
+	tpep_dropoff_datetime,
+	total_amount,
+	"PULocationID",
+	"DOLocationID"
+FROM 
+	yellow_taxi_trips AS t 
+WHERE
+	"DOLocationID" NOT IN (SELECT "LocationID" FROM zones)
+LIMIT
+	100;
+```
+Results from bot querys show that nothing is missing.
+
+### Using Left, Right and Outer Joins when some Location IDs in either table
+
+When using the regular `JOIN`-Keyword, it defaults to a `INNER JOIN`, which joins tables where keys of both tables match. To also retain unmatched columns in the `LEFT` or the `RIGHT` table, the usage of `LEFT JOIN` or `RIGHT JOIN` is required.
+
+`LEFT JOIN Example`: Retains all records in the left table, even if there is no matching record in the right table
+
+```sql
+SELECT
+	tpep_pickup_datetime,
+	tpep_dropoff_datetime,
+	total_amount,
+	"PULocationID",
+	"DOLocationID"
+FROM 
+	yellow_taxi_trips AS t 
+	LEFT JOIN zones AS zpu
+		ON t."PULocationID" = zpu."LocationID"
+	LEFT JOIN zones AS zdo
+		ON t."DOLocationID" = zdo."LocationID"
+LIMIT 
+	100;
+```
+
+First joins the `zpu` to `yellow_taxi_trips` on `PULocationID`, then joins `zdo` to the previous `LEFT JOIN`. This retains all records from the leftmost table. The `yellow_taxi_trips` is therefore fully preserved.
+
+`RIGHT JOIN Example:` Joining tables together from right to left, where entries in the right table are retained when joined.
+
+```sql
+SELECT
+	tpep_pickup_datetime,
+	tpep_dropoff_datetime,
+	total_amount,
+	"PULocationID",
+	"DOLocationID"
+FROM 
+	yellow_taxi_trips AS t 
+	RIGHT JOIN zones AS zpu
+		ON t."PULocationID" = zpu."LocationID"
+	RIGHT JOIN zones AS zdo
+		ON t."DOLocationID" = zdo."LocationID"
+LIMIT 
+	100;
+```
+
+`(FULL) OUTER JOIN Example`: A Combination of `LEFT JOIN` and `RIGHT JOIN`, where every entry is retained from both tables and missing values in entries are filled in with NULL-values.
+
+### Using `GROUP_BY` to calclulate number of trips per day + ordering them with `ORDER BY`
+
+
+```sql
+SELECT
+  -- casting to sql-date format
+	CAST(tpep_dropoff_datetime AS DATE) AS "day",
+  -- counting the number of trips
+	COUNT(1) 
+FROM 
+	yellow_taxi_trips AS t 
+GROUP BY -- result is grouped by the day
+	CAST(tpep_dropoff_datetime AS DATE)
+ORDER BY -- Ascending order
+	"day" ASC;
+```
+
+### `GROUP BY` and `ORDER BY` with multiple columns
+
+```sql
+SELECT
+	CAST(tpep_dropoff_datetime AS DATE) AS "day",
+	"DOLocationID",
+	COUNT(1) AS "count",
+	MAX(total_amount),
+	MAX(passenger_count)
+FROM 
+	yellow_taxi_trips AS t 
+GROUP BY
+	1, 2 -- groupin by row 1 and 2 
+ORDER BY
+	"day" ASC, -- day from lowest to highest
+	"DOLocationID" ASC;  -- dropoff location id from low to high 
+```
