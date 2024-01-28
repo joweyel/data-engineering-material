@@ -31,3 +31,5 @@ My study material to the Data Engineering class by DataTalks.Club.
 - Python3
 - Google Cloud SDK
 - Terraform
+
+![arch_2](images/arch_2.jpeg)
