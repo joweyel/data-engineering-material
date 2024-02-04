@@ -3,7 +3,7 @@ My study material to the Data Engineering class by DataTalks.Club.
 
 ## Syllabus
 
-## [Module 1: Introduction & Prerequisites](week_1_basics_n_setup)
+## [Module 1: Introduction & Prerequisites](01-docker-terraform)
 
 * Course overview
 * Introduction to GCP
@@ -11,6 +11,12 @@ My study material to the Data Engineering class by DataTalks.Club.
 * Running Postgres locally with Docker
 * Setting up infrastructure on GCP with Terraform
 * Preparing the environment for the course
+* Homework
+
+## [Module 2: Workflow Orchestration](02-workflow-orchestration/)
+* Data Lake
+* Workflow orchestration
+* Workflow orchestration with Mage
 * Homework
 
 
