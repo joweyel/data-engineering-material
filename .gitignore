@@ -196,3 +196,5 @@ terraform.rc
 
 # Ignoring Data Engineering Zoomcamp creds.
 dtc-de-*.json
+
+*.csv*
