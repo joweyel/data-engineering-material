@@ -9,9 +9,8 @@
 * [2.2.5 - 🔍 ETL: GCS to BigQuery](#225----etl-gcs-to-bigquery)
 * [2.2.6 - 👨‍💻 Parameterized Execution](#226----parameterized-execution)
 * [2.2.7 - 🤖 Deployment (Optional)](#227----deployment-optional)
-* [2.2.8 - 🧱 Advanced Blocks (Optional)](#228----advanced-blocks-optional)
-* [2.2.9 - 🗒️ Homework](#229---%EF%B8%8F-homework)
-* [2.2.10 - 👣 Next Steps](#2210----next-steps)
+* [2.2.8 - 🗒️ Homework](#228---%EF%B8%8F-homework)
+* [2.2.9 - 👣 Next Steps](#229----next-steps)
 
 ## Importante Code that is required in this Section
 - `mage-ai-terraform-templates`: https://github.com/mage-ai/mage-ai-terraform-templates.git
