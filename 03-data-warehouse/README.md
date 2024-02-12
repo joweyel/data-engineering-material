@@ -55,14 +55,17 @@ LIMIT 100;
 
 
 -- Creating external table referring to gcs path
-CREATE OR REPLACE EXTERNAL TABLE `taxi-rides-ny.nytaxi.external_yellow_tripdata`
+CREATE OR REPLACE EXTERNAL TABLE taxi-rides-ny.nytaxi.external_yellow_tripdata
 OPTIONS (
   format = 'CSV',
-  uris = ['gs://nyc-tl-data/trip data/yellow_tripdata_2019-*.csv', 'gs://nyc-tl-data/trip data/yellow_tripdata_2020-*.csv']
+  uris = [
+    'gs://nyc-tl-data/trip data/yellow_tripdata_2019-*.csv', 
+    'gs://nyc-tl-data/trip data/yellow_tripdata_2020-*.csv'
+  ]
 );
 
 -- Check yello trip data
-SELECT * FROM taxi-rides-ny.nytaxi.external_yellow_tripdata limit 10;
+SELECT * FROM taxi-rides-ny.nytaxi.external_yellow_tripdata LIMIT 10;
 
 -- Create a non partitioned table from external table
 CREATE OR REPLACE TABLE taxi-rides-ny.nytaxi.yellow_tripdata_non_partitoned AS
