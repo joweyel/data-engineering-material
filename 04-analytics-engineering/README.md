@@ -662,3 +662,31 @@ How to deploy the project to provide the data to the stakeholders.
 - A job could also generate documentation, that could be viewed under the run information
 - If dbt source freshness was run, the results can also be viewed at the end of a job
 
+
+After running the dbt project at least one time there are several logged artifacts and documentation. The documentation of each run can be accessed by setting `Explore > Settings > Artifacts > Documentation`. You can choose the recently ran job `Nightly`. After this, clicking on the documentation will return the documentation of the chosen run.
+
+### Continuous Integration (CI) Job & what is CI?
+
+- CI is the practice of regularly merge developement branches into a central repository, after which automated builds and tests are run
+- The goal is to reduce adding bugs to the production code and maintain a more stable project
+- dbt allows us to create CI on pull requests
+- Enabled via webhooks from GitHab or GitLab
+- When a Pull Request is ready to be merged, a webhook is received in dbt cloud that will enqueue a new run of the specified job
+- The run of the CI job will be against a temporary schema
+- No Pull Request will be able to be merged unless the run has been completed successfully
+
+### Create a CI job
+`Deploy > Environment > CI job`
+
+**Create CI job** (using the followin parameters):
+
+- `Job settings`: 
+  - Job name: CI checks
+  - Description: ...
+  - Environment: Production
+  - Trigger by pull request: [x]
+
+- `Execution settings`:
+  - `dbt build --select state:modified+`
+
+Save the CI job! This will run every time when something was changed and pushed to the git repo.
