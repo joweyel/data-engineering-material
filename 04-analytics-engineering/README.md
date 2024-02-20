@@ -690,3 +690,114 @@ After running the dbt project at least one time there are several logged artifac
   - `dbt build --select state:modified+`
 
 Save the CI job! This will run every time when something was changed and pushed to the git repo.
+
+## 4.4.2 - Deploy Using dbt locally (Alternative B)
+
+The code that was developed in section 4.4.1 (online version) can also be used offline with postgres, however with fewer features.
+
+The profile for `pg-dbt-workshop` should be extended with a `prod`-section
+```yml
+pg-dbt-workshop:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      user: username
+      password: pw
+      port: 5432
+      dbname: production
+      schema: dbt_data_local
+      threads: 4
+      keepalives_idle: 0
+    prod:
+      type: postgres
+      host: localhost
+      user: username
+      password: pw
+      port: 5432
+      dbname: production
+      schema: master
+      threads: 4
+      keepalives_idle: 0
+```
+
+Now you can build the production version of the project with:
+```bash
+dbt build -t prod 
+```
+
+## 4.5.1 - Visualising the data with Google Looker Studio (Alternative A)
+
+Link to Looker studio: https://lookerstudio.google.com/
+
+When on the dashboard:
+- Create `Data Source`, choose `BigQuery`
+- Choose:
+  - Project: `taxi-rides-ny` (can be different) 
+  - Dataset: `production`
+  - Table: `fact_trips`
+- Connect!
+
+For the full explanation of the usage of `Looker Studio` please refer to this video:
+
+[![Looker Studio](https://img.youtube.com/vi/39nLTs74A3E/0.jpg)](https://www.youtube.com/watch?v=39nLTs74A3E)
+
+The final dashboard, constructed from the dbt data can be something like this:
+![gcp_looker](images/gcp_looker.jpg)
+
+## 4.5.2 - Visualising the data with Metabase (Alternative B)
+
+Metabase is a data visualization and data analysis tool, that can be used in the cloud or locally (open source version).
+
+- Website: https://www.metabase.com/
+- Repo: https://github.com/metabase/metabase
+- Local versions: https://www.metabase.com/start/oss/
+
+Running Metabase locally can be done with docker
+```bash
+docker run -d -p 3000:3000 --name metabase metabase/metabase
+```
+The Metabase UI can now be opened with http://localhost:3000 and a connection to a database of choice can be established.
+
+For a demonstration of functionality of Metabase please refer to this video.
+
+[![Metabase](https://img.youtube.com/vi/BnLkrA7a6gM/0.jpg)](https://www.youtube.com/watch?v=BnLkrA7a6gM)
+
+An exemplary dashboard can look like this:
+
+![metabase_dashboard](images/metabase_dashboard.jpg)
+
+## [Optional] Hack for loading data to BigQuery for Week 4
+
+To ingest the data for this section there is a way to do it with data from the GCP marketplace. The data can be found here: https://console.cloud.google.com/marketplace/product/city-of-new-york/nyc-tlc-trips.
+
+```sql
+-- Green trip data 2019
+CREATE TABLE `taxi-rides-ny.trips_data_all.green_tripsdata` AS
+SELECT * FROM `bigquery-public-data.new_york_taxi_trips.tlc_green_trips_2019`;
+
+-- Green trip data 2020
+INSERT INTO `taxi-rides-ny.trips_data_all.green_tripsdata`
+SELECT * FROM `bigquery-public-data.new_york_taxi_trips.tlc_green_trips_2020`;
+
+-- Yellow trip data 2019
+CREATE TABLE `taxi-rides-ny.trips_data_all.yellow_tripsdata` AS
+SELECT * FROM `bigquery-public-data.new_york_taxi_trips.tlc_yellow_trips_2019`;
+
+-- Yellow trip data 2020
+INSERT INTO `taxi-rides-ny.trips_data_all.yellow_tripsdata`
+SELECT * FROM `bigquery-public-data.new_york_taxi_trips.tlc_yellow_trips_2020`;
+
+-- fhv trip data 2019
+CREATE OR REPLACE EXTERNAL TABLE taxi-rides-ny.trips_data_all.external_fhv_tripsdata
+OPTIONS (
+    format = 'PARQUET',
+    uris = ['gs://nyc-data-bucket/fhv/fhv_tripdata_2019-*.parquet']
+);
+
+CREATE OR REPLACE TABLE taxi-rides-ny.trips_data_all.fhv_tripsdata AS
+SELECT * FROM taxi-rides-ny.trips_data_all.external_fhv_tripsdata;
+```
+
+Another way is to use the helper script that can be found here: https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/03-data-warehouse/extras. This data can be imported, as seen in Section 3.
