@@ -801,3 +801,9 @@ SELECT * FROM taxi-rides-ny.trips_data_all.external_fhv_tripsdata;
 ```
 
 Another way is to use the helper script that can be found here: https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/03-data-warehouse/extras. This data can be imported, as seen in Section 3.
+
+
+## Homework
+
+- The homework questions and answers can be found [here](homework/homework.md).
+- The code for the homework can be found in the folder of the [dbt-project](taxi_rides_ny/).
