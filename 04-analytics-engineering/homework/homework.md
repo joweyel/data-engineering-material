@@ -80,6 +80,8 @@ Deadline: 24 February (Thursday), 23:00 CET
   * `Question 4`: Yellow
 
 - The code that was used to get the solutions can be found in the folder for the [dbt project](../taxi_rides_ny/)
-- The dashboard for Question 4 can be found here [Dashboard](https://lookerstudio.google.com/reporting/65a18465-fadd-4410-87b4-c9243fdb7555)
+  - Most relevant files: [stg_fhv_tripdata.sql](code/stg_fhv_tripdata.sql), [fact_fhv_trips.sql](code/fact_fhv_trips.sql)
+
+- The dashboard for Question 4 can be found [here](https://lookerstudio.google.com/reporting/65a18465-fadd-4410-87b4-c9243fdb7555)
   - You need a google account to see the dashboard
   - Currently rudimentary but sufficient (due to time constraint)
