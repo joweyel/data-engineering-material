@@ -385,9 +385,9 @@ Given are a partitioned big dataframe and a non-partitioned small dataframe, the
 
 This approach allows Spark to perform the join operation in a distributed and parallel manner. However, it is important to note that this method works best when one dataframe is significantly smaller than the other.
 
-## 5.5 Resilient Distributed Datasets
+## 5.5 (Optional) Resilient Distributed Datasets
 
-### 5.5.1 Operations on Spark RDDs
+### 5.5.1 (Optional) Operations on Spark RDDs
 
 **Content of this section**:
 
@@ -396,13 +396,71 @@ This approach allows Spark to perform the join operation in a distributed and pa
 - Operations on RDD: map, filter, reduceByKey
 - From RDD to DataFrame
 
+The code if this section can be found in the notebook [spark_rdd.ipnb](code/spark_rdd.ipnb)
+
+- RDD's are on layer of abstraction lower than dataframes. 
+- Dataframes in spark use RDD's in the background.
+- While Dataframes have a schema, RDD's are a collection of objects 
+
+
 ### 5.5.2 Spark RDD mapPartition
+
+**Content of this section**:
+
+- Using mapPartition on RDD's
+
+The code if this section can be found in the notebook [spark_rdd.ipnb](code/spark_rdd.ipnb)
+
+
+In Spark, `mapPartitions` is an operation on RDDs. It is an advanced version of the map transformation that allows you to process each partition of the RDD independently. The primary difference between map and `mapPartitions` is that map operates on individual elements of the RDD, while `mapPartitions` processes entire partitions at once.
+
+1. **`Partition-wise Operation:`** Instead of applying the provided function to each element individually, `mapPartitions` applies the function to each partition of the RDD. The function is invoked once for each partition, and it receives an iterator containing all the elements in that partition.
+
+2. **`Iterator Input and Output:`** The user-defined function passed to mapPartitions takes an iterator as an input, allowing you to iterate through all the elements in a partition efficiently. The function should return an iterator, which will be used to construct the new RDD.
+
+3. **`Efficiency:`** Because mapPartitions processes entire partitions at once, it can be more efficient than map in certain scenarios. For example, if your processing logic involves some per-partition initialization or aggregation, using mapPartitions can avoid redundant setup and teardown operations for each element.
+
 
 ## 5.6 Running Spark in the Cloud
 
 ### 5.6.1 Connecting to Google Cloud Storage
 
+**Content of this section**:
+
+- Uploading data to GCS
+- Connecting Spark jobs to GCS
+
+#### Uploading data to GCS
+
+To upload the data used in previous sections to GCS, the following line can be used:
+
+```python
+gsutil -m cp -r data/raw/ gs://dtc_data_lake_de-zoomcap-nytaxi/pq
+```
+
+#### Connecting Spark to GCS
+
+For the connection between PySpark and GCS, the cloud storage connector for Hadoop is needed. The required library can be obtained directly from GCS:
+
+```python
+gsutil cp gs://hadoop-lib/gcs/gcs-connector-hadoop3-2.2.5.jar gcs-connector-hadoop3-2.2.5.jar
+mkdir -p code/lib/
+mv gcs-connector-hadoop3-2.2.5.jar code/lib/
+```
+
+With the data in the cloud and the gcs-connector jar downloaded a connection to GCS can be establised. An exemplary connection is established in [this](code/spark_gcs.ipynb) notebook.
+
+
 ### 5.6.2 Creating a Local Spark Cluster
+
+**Content of this section**:
+
+- Creating the cluster
+- Turning the notebook into a script
+- Using spark-submit for submitting spark-jobs
+
+
+### 5.6.3 Setting up a Dataproc Cluster
 
 ### 5.6.2 Creating a Local Spark Cluster
 

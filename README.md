@@ -13,7 +13,7 @@ My study material to the Data Engineering class by DataTalks.Club.
 * Preparing the environment for the course
 * Homework
 
-#### [Module 2: Workflow Orchestration](02-workflow-orchestration/)
+### [Module 2: Workflow Orchestration](02-workflow-orchestration/)
 * Data Lake
 * Workflow orchestration
 * Workflow orchestration with Mage
