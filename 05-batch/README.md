@@ -460,12 +460,137 @@ With the data in the cloud and the gcs-connector jar downloaded a connection to 
 - Using spark-submit for submitting spark-jobs
 
 
+The first step is starting the Spark master from the console. This was previously done in a notebook directly after the PySpark imports. This can be done by:
+```bash
+# Assuming SPARK_HOME variable is set correctly
+bash ${SPARK_HOME}/sbin/start-master.sh 
+```
+
+The spark-master is now accessible over http://localhost:8080/. Instead of `"local[*]"`, the URL displayed in the Spark UI is used in the `SparkSession`.
+
+```python
+spark = SparkSession.builder \
+    .master("spark://hp-computer:7077") \
+    .appName("test") \
+    .getOrCreate()
+```
+
+There is still some problem with the execution of anything that has to do with spark. This can be seen in the following error:
+```log
+24/02/27 21:59:13 WARN TaskSchedulerImpl: Initial job has not accepted any resources; check your cluster UI to ensure that workers are registered and have sufficient resources
+```
+There are no worker registered on the local cluster. This can be remedied by calling one of these two commands (usable interchangabley):
+```bash
+URL=<your-spark-url>:7077
+./start-slave.sh $URL
+# or
+./start-worker.sh $URL
+```
+In the Spark-UI there is now a worker present, that will handle spark related tasks.
+
+The notebook of this section is [local_cluster_spark.ipynb](code/local_cluster_spark.ipynb). This notebook has to be converted to a python script. For this purpose the following command is used:
+```bash
+jupyter nbconvert --to=script local_cluster_spark.ipynb
+```
+
+After cleaning up and some adaptions to the exported script, the scipt [local_cluster_spark.py](code/local_cluster_spark.py) can be used with
+```bash
+python3 local_cluster_spark.py --input_green <green-path> --input_yellow <yellow-path> --output <output-path>
+```
+or by using the following script with pre-defined paths:
+```bash
+./run_local_cluster_script.sh
+```
+The script contains the following code:
+```bash
+#!/usr/bin/bash
+
+URL="spark://hp-computer:7077"
+
+spark-submit \
+    --master="${URL}" \
+    local_cluster_spark.py \
+        --input_green=../data/data/raw/green/2021/*/ \
+        --input_yellow=../data/data/raw/yellow/2021/*/ \
+        --output=../data/data/report-2021
+```
+This specifies the spark-master, which is used to execute the following program `local_cluster_spark.py`. After running the script, the master and the worker have to be shut down. This is done with the following commands:
+```bash
+bash ${SPARK_HOME}/sbin/stop-worker.sh
+bash ${SPARK_HOME}/sbin/stop-master.sh
+```
+
 ### 5.6.3 Setting up a Dataproc Cluster
 
-### 5.6.2 Creating a Local Spark Cluster
+**Content of this section**:
+- Creating a cluster
+- Running a Spark job with Dataproc
+- Submitting the job with the cloud SDK
+
+#### Setup process
+1. Search for `Dataproc` on GCP
+2. Create a new cluster
+  - **Name**: `de-zoomcamp-cluster`
+  - **Location**: `Your choice`
+  - **Cluster type**: `Single Node` (for experimentation purposes)
+  - **Optional components**:
+    - `Jupyter Notebook`
+    - `Docker`
+  - All other options can be left as default
+
+After the cluster is set up, you are able to send spark-jobs to it. In order to do this, the file with the PySpark code has to be on GCS. For this purpose the following code has to be used:
+```bash
+gsutil cp code/local_cluster_spark.py gs://dtc_data_lake_de-zoomcap-nytaxi/code/local_cluster_spark.py
+```
+After opening the cluster and clicking on `Submit Job`, you have to configure the job:
+- **Job ID**: Any number
+- **Job type**: `PySpark`
+- **Main python file**: `gs://dtc_data_lake_de-zoomcap-nytaxi/code/local_cluster_spark.py`
+- **Arguments**: 
+  ```
+  --input_green=gs://dtc_data_lake_de-zoomcap-nytaxi/pq/raw/green/2021/*/
+  --input_yellow=gs://dtc_data_lake_de-zoomcap-nytaxi/pq/raw/yellow/2021/*/
+  --output=gs://dtc_data_lake_de-zoomcap-nytaxi/report-2021
+  ```
+
+Now the job can be submitted! After the job has finished the results of the code are written to GCS at the specified location.
+
+Ok, this was all done over Web-UI, which is not very convenient. To remedy this, a json for calling `Dataproc` over REST-API is provided under the `Configuration`-part of the job-details by clicking `Equivalent REST`.
+
+The information for a call to `Dataproc` can be extracted from the file:
+```bash
+glcoud dataproc jobs submit pyspark \
+  --cluster=cluster-name \
+  --region=region \
+  other dataproc-flags \
+  -- job-args
+```
+
+Example call:
+```bash
+gcloud dataproc jobs submit pyspark \
+  --cluster=cluster-e87b \
+  --region=europe-west3 \
+  gs://dtc_data_lake_de-zoomcap-nytaxi/code/local_cluster_spark.py \
+  -- \
+      --input_green=gs://dtc_data_lake_de-zoomcap-nytaxi/pq/raw/green/2021/*/ \
+      --input_yellow=gs://dtc_data_lake_de-zoomcap-nytaxi/pq/raw/yellow/2021/*/ \
+      --output=gs://dtc_data_lake_de-zoomcap-nytaxi/report-2021
+```
+
+This command will fail if you dont have provided access to the service account you use. For this purpose you have to add the following permissions to the servive account:
+- `Dataproc Administrator`
+
+Now you should be able to see something like this and further outputs:
+```
+Job [22a94a77a2694d9c892d615515399377] submitted.
+Waiting for job output...
+```
 
 ### 5.6.4 Connecting Spark to Big Query
 
+TODO
 
 ## Homework
-The homework
+- The homework [questions](homework/homework.md)
+- The homework [solutions](homework/solutions.ipynb) 
