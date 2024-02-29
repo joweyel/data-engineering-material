@@ -589,8 +589,60 @@ Waiting for job output...
 
 ### 5.6.4 Connecting Spark to Big Query
 
-TODO
+**Content of this section**:
+
+- Writing the spark job directly to BigQuery
+
+*Pre-Requisite (Optional)*: 
+- If the data is in another GCP project, it is required either to copy the data from one bucket to the bucket of the current project and load the parquet files to BigQuery. The other option is to change the service account and use the project where the data is already present. 
+- Alternatively: copying of BigQuery dataset
+  ```bash
+  bq mk --transfer_config \
+    --project_id=[PROJECT_ID] \
+    --data_source=[DATA_SOURCE] \
+    --target_dataset=[DATASET] \
+    --display_name=[NAME] \
+    --params='[PARAMETERS]'
+  ```
+  **Example Application** (copies full `trips_data_all` dataset from `taxi-rides-ny` to `dtc-de`):
+  ```bash
+  bq mk \
+    --transfer_config \
+    --project_id=dtc-de \
+    --target_dataset=trips_data_all \
+    --display_name='Taxi_Transfer' \
+    --params='{
+      "source_dataset_id":"trips_data_all",
+      "source_project_id":"taxi-rides-ny",
+      "overwrite_destination_table":"true"
+      }'
+  ```
+In the command above, replace [PROJECT_ID], [DATA_SOURCE], [DATASET], [NAME], and [PARAMETERS] with your specific details. The --params option is used for specifying the source dataset and other options.
+
+The content of the file [local_cluster_spark.py](code/local_cluster_spark.py) can be easily adapted for using BigQuery ([bigquery_spark.py](code/bigquery_spark.py)) to save the data to. For this only one command has to be changed:
+```python
+# Local or Dataproc Version:
+df_result.coalesce(1).write.parquet(output, mode="overwrite")
+# BigQuery Version:
+df_result.write.format("bigquery").option("table", output).save()
+```
+The `output` parameter specifies the table where the result will be saved to in BigQuery. To run the Spark + BigQuery scipt you can use the run script [run_bigquery_spark.sh](code/bigquery_spark.py) or the following command in the console:
+```bash
+#!/usr/bin/bash
+
+gcloud dataproc jobs submit pyspark \
+    --cluster=cluster-e87b \
+    --region=europe-west3 \
+    gs://dtc_data_lake_de-zoomcap-nytaxi/code/bigquery_spark.py \
+    --jars=gs://spark-lib/bigquery/spark-bigquery-latest_2.12.jar \
+    -- \
+        --input_green=gs://dtc_data_lake_de-zoomcap-nytaxi/pq/raw/green/2020/*/ \
+        --input_yellow=gs://dtc_data_lake_de-zoomcap-nytaxi/pq/raw/yellow/2020/*/ \
+        --output=trips_data_all.reports-2020
+```
+
+After running the command there will appear a `reports-2020` table in the `trips_data_all` dataset. SUCCESS!
 
 ## Homework
 - The homework [questions](homework/homework.md)
-- The homework [solutions](homework/solutions.ipynb) 
+- The homework [solutions](homework/solutions.ipynb)
