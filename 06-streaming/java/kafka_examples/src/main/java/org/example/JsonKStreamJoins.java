@@ -1,6 +1,7 @@
 package org.example;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -26,6 +27,7 @@ public class JsonKStreamJoins {
         props.put("sasl.mechanism", "PLAIN");
         props.put("client.dns.lookup", "use_all_dns_ips");
         props.put("session.timeout.ms", "45000");
+        // props.put(ProducerConfig.ACKS_CONFIG, "all");
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "kafka_tutorial.kstream.joined.rides.pickuplocation.v1");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);

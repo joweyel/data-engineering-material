@@ -213,26 +213,244 @@ public void consumeFromKafka() {
 <a id="kafka-configurtation"></a>
 ## 6.6 Kafka configuration
 
+In this section some important questions will be answered.
+
+### Kafka cluster
+- **What is a Kafka cluster?**
+    - Machines / Nodes that all run Kafka that communicate with each other
+- **How do Kafka-Nodes communicate?**
+    - `Previously`: Zookeeper (for keeping track of Kafka-cluster components)
+    - `Now`: Kafka-internal functionality used for communication (topics)
+
+### Topic
+- **What is a topic?**
+    - A sequence of events that are coming in 
+    - Example: The previously used `rides`-topic stores events of (taxi-)rides that contains a `message` with the following components:
+        - `key` (`vendor_id`, but could be anything)
+        - `value` (information about the ride; the datapoint)
+        - `timestamp`: time the record was produced
+
+### Replication
+- **What is replication and why is it used?**
+    - Having copies of the same topic distributed on multiple nodes
+    - Mitigates the loss of a topic by having a copy of it and all the messages
+    - There is one `Leader` node and one or more `Follower` nodes;
+        - `Leader`: the node with the "active" topic that is communicated with (producer, consumer)
+        - `Follower`: recieve and save the topics and the messages of the `Leader`
+        - A `Follower` can become `Leader` if the `Leader` is unavailable and another node will become follower (depending on number of specified follower)
+
+### Retention
+- **What does retention mean in Kafka?**
+    - How long data will be retained by kafka i.e. how long are messages stored in a topic on a kafka node
+    - Retention is usually limited due to constaints like memory (messages can be deleted after specified time)
+
+### Partitions
+- **What are partitions and why are they used?**
+    - Partitions are sub-divisions of a topic
+    - One topic can be distributed over multiple kafka-nodes and each partition can handle producer and a consumer independent from each other. With this more topics are available to be communicated with.
+    - Partitioned topics can still be replicated 
+
+![w6_6_partition](images/w6_6_partition.jpg)
+
+### Offset
+- How does a consumer know which particular message to consume and how does Kafka know what messages a consumer has already consumed?
+- **Offsets are used!**
+    - Offset is added to each message (like a list-index) and can be read by consumer
+    - A consumer provides the Kafka-cluster with the offset which is then published in a specific topic `__consumer_offset` (internal Kafka-topic)
+    - Kafka knows which consumer group ID consumed (committed) how much messages from which topic
+
+![w6_6_offset](images/w6_6_offset.jpg)
+
+### Auto.Offset.Reset
+
+The decision on whether to consume from the beginning of a topic partition or to only consume new messages when there is no initial offset for the consumer group is controlled by the `auto.offset.reset` configuration parameter on the Kafka Consumer. The following table shows the valid values and their behaviour.
+
+| **`Value`** | **`Usage`** | 
+| ----------- | ----------- |
+| **earliest**| Reset offset to the earliest offset. Consume from the beginning of the topic partition. |
+| **latest**  | Reset offset to the latest offset. Consume from the end of the topic partition (*default*).
+| **none**    | Throw an exception if no offset present for the consumer group | 
+
+![w6_6_auto_offset_reset](images/w6_6_auto_offset_reset.jpg)
+
+### Ack.All (Acknowledge All)
+When a producer produces a message to a topic, the message has to be recieved in some form. Here acknowledgement (`ack`) comes into play in terms of what successfully recieving a message means. 
+
+The types of `ack`'s:
+- `ack:0`: <u>Fire and Forget</u>
+    - Producer does not care if the message was recieved (acknowledged) by the Leader or not
+    - When fast processing of un-critical data is required
+- `ack:1`: <u>Leader successful</u> 
+    - Message has to be received (acknowledged) by the Leader (log has to be produced)
+    - A good compromise between critical and un-critical
+- `ack:all`: <u>Leader + Followers</u>
+    - Leader and Follower must have recieved the messages  (logs of it)
+    - Used for more critical task where loss of messages is not acceptable
+![w6_6_ack_all](images/w6_6_ack_all.jpg)
+
+### Recap
+- `Kafka-clustr`: Kafka-nodes that talk to each other
+- `Topic`: Collection of events (containing messages), that are produced by a producer. 
+- `Message`: Content of an event that has the fields *key*, *value*, *timestamp* 
+- `Replication`: duplication of topic-messages accross different nodes. To handle the case if nodes are down. Nodes can be Leader or Follower.
+- `Retention`: How long a message is saved before it will be deleted. For "housekeeping", to avoid a full memory.
+- `Partition`: Makes a topic consumable by more than one consumer (not possible with one partition)
+- `Offset`: Saves and stores the current state of what was already read from a topic in a Kafka-internal topic. Helps to find out producer and consumer where to "start".
+- `Auto.Offset.Reset`: *Earliest* and *Latest* provide specific offsets for new producer / consumer, s.t. they know where to start.
+- `Ack.All`: Acknowledgement types *ack:0*, *ack:1* and *ack:all* for different safety levels of message acknowledgement
+
+
 <a id="kafka-streams-basics"></a>
 ## 6.7 Kafka streams basics
+
+In this section a simple Kafka-stream example will be examined. This example will give us the basic building blocks for more complicated cases later on. It will be shown, that keys play a important role when messages are outputed to Kafka. 
+
+The first class that will be created will be [JsonKStream.java](java/kafka_examples/src/main/java/org/example/JsonKStream.java):
+
+Now you can go to confluent.cloud and create the desired topic with the following properties: 
+- **Topic name**: `rides-pulocation-count`
+- **Partitions**: 2
+
+After running `JsonKStream.java` you can see the results in the topic section of your kafka cluster on confluence cloud.
+
+### TODO - Visualizazions
 
 <a id="stream-join"></a>
 ## 6.8 Kafka stream join
 
+**Example**: There are 2 topics in which the data will be joined. For this a Kafka stream application is used.
+
+In the previous sections there was the topic `rides` that has messages that have the a value for `Drop-off Location`, which can be used as a key. The topic `pickup-location` has the key `pickup location` inside it's messages. Both topics can be joined on location ids. 
+
+![w6_8_stream_join](images/w6_8_stream_join.jpg)
+
+The code can be found in [JsonKStreamJoin.java](java/kafka_examples/src/main/java/org/example/JsonKStreamJoins.java). The relevant code snippets are:
+
+```java
+public Topology createTopology() {
+    StreamsBuilder streamsBuilder = new StreamsBuilder();
+    KStream<String, Ride> rides = streamsBuilder.stream(
+        Topics.INPUT_RIDE_TOPIC, 
+        Consumed.with(
+            Serdes.String(), 
+            CustomSerdes.getSerde(Ride.class)
+        )
+    );
+    KStream<String, PickupLocation> pickupLocations = streamsBuilder.stream(
+        Topics.INPUT_RIDE_LOCATION_TOPIC, 
+        Consumed.with(
+            Serdes.String(), 
+            CustomSerdes.getSerde(PickupLocation.class)
+        )
+    );
+
+    var pickupLocationsKeyedOnPUId = pickupLocations.selectKey(
+        (key, value) -> String.valueOf(value.PULocationID)
+    );
+
+    var joined = rides.join(
+        pickupLocationsKeyedOnPUId, (ValueJoiner<Ride, PickupLocation, Optional<VendorInfo>>) (ride, pickupLocation) -> {
+            var period = Duration.between(ride.tpep_dropoff_datetime, pickupLocation.tpep_pickup_datetime);
+                if (period.abs().toMinutes() > 10) 
+                    return Optional.empty();
+                else 
+                    return Optional.of(
+                        new VendorInfo(
+                            ride.VendorID, 
+                            pickupLocation.PULocationID, 
+                            pickupLocation.tpep_pickup_datetime, 
+                            ride.tpep_dropoff_datetime
+                        ));
+            }, 
+            JoinWindows.ofTimeDifferenceAndGrace(Duration.ofMinutes(20), Duration.ofMinutes(5)),
+            StreamJoined.with(Serdes.String(), CustomSerdes.getSerde(Ride.class), CustomSerdes.getSerde(PickupLocation.class))
+    );
+
+    joined.filter(((key, value) -> value.isPresent())).mapValues(Optional::get)
+            .to(Topics.OUTPUT_TOPIC, Produced.with(Serdes.String(), CustomSerdes.getSerde(VendorInfo.class)));
+
+    return streamsBuilder.build();
+}
+```
+
+```java
+    public void joinRidesPickupLocation() throws InterruptedException {
+        var topology = createTopology();
+        var kStreams = new KafkaStreams(topology, props);
+
+        kStreams.setUncaughtExceptionHandler(exception -> {
+            System.out.println(exception.getMessage());
+            return StreamsUncaughtExceptionHandler.StreamThreadExceptionResponse.SHUTDOWN_APPLICATION;
+        });
+        kStreams.start();
+        while (kStreams.state() != KafkaStreams.State.RUNNING) {
+            System.out.println(kStreams.state());
+            Thread.sleep(1000);
+        }
+        System.out.println(kStreams.state());
+        Runtime.getRuntime().addShutdownHook(new Thread(kStreams::close));
+    }
+```
+
+To finally run the stream join, the following programs have to be build and executed:
+1. [JsonKStreamJoin.java](java/kafka_examples/src/main/java/org/example/JsonKStreamJoins.java)
+    - Will start waiting for messages
+2. [JsonProducer.java](java/kafka_examples/src/main/java/org/example/JsonProducer.java)
+    - Producer that publishes messages over the `rides`-topic
+3. [JsonProducerPickupLocation.java](java/kafka_examples/src/main/java/org/example/JsonProducerPickupLocation.java)
+    - Producer that publishes messages over the `rides_location`-topic
+
+If everything worked out, you should be able to see the topics in confluence. 
+
+*Important*: If two topis should be merged, they must have the same number of partitions. 
+
+
 <a id="stream-testing"></a>
 ## 6.9 Kafka stream testing
+
+**Content of this section**:
+- Unit tests for kafka 
+
+
+### What was done before (an abstraction of the process)
+
+![week6_9_topology_test](images/week6_9_topology_test.jpg)
+
+- `Topology`: Defines what topics to read from, what actions do take place where, where to output results
+- `KStreams`: Used with the `StreamsBuilder` to define Kafka topology
+- `StreamsBuilder`: Object that contains the Kafka topology
+
+The topology in Kafka is what can be testet. The tests should validate that the topology does what it should. For the purpose of thesting the topology in the class [JsonKStream.java](java/kafka_examples/src/main/java/org/example/JsonKStream.java), the test-class [JsonKStreamTest.java](java/kafka_examples/src/test/java/org/example/JsonKStreamTest.java) is used. There is also a test class for [JsonKStreamJoins.java](java/kafka_examples/src/main/java/org/example/JsonKStreamJoins.java) that has the name [JsonKStreamJoinsTest.java](java/kafka_examples/src/test/java/org/example/JsonKStreamJoinsTest.java) and tests if joining works properly. For the functionalty plese refer to the aforementioned code.
+
 
 <a id="stream-windowing"></a>
 ## 6.10 Kafka stream windowing
 
+[Video](https://www.youtube.com/watch?v=r1OuLdwxbRc&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=76&pp=iAQB) to this section.
+
+**Content of this section**:
+- Global KTables
+- How Kafka allows different joins (and what joins are allowed)
+- Left, Right, Inner Joins in Kafka
+- How Windowing works (and what Kafka provides)
+
+
 <a id="ksqldb"></a>
 ## 6.11 Kafka ksqldb & Connect
+
+[Video](https://www.youtube.com/watch?v=DziQ4a4tn9Y&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=77&pp=iAQB) to this section.
+
 
 <a id="schema-registry"></a>
 ## 6.12 Kafka Schema registry
 
+[Video](https://www.youtube.com/watch?v=tBY_hBuyzwI&list=PL3MmuxUbc_hJed7dXYoJw8DoCuVHhGEQb&index=78&pp=iAQB) to this section.
+
 <a id="kafka-streaming-python"></a>
 ## 6.13 Kafka Streaming with Python
 
+
+
 <a id="python-structured-streaming"></a>
 ## 6.14 Pyspark Structured Streaming
+

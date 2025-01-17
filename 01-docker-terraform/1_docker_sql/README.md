@@ -123,7 +123,7 @@ pip install pgcli
 
 To finally connect to the database, the following command is used:
 ```bash
-  pgcli -h localhost -p 5432 -u root -d ny_taxi
+pgcli -h localhost -p 5432 -u root -d ny_taxi
 ```
 
 You are now insid the container, but there are no Databases yet!
@@ -165,7 +165,7 @@ FROM
     yellow_taxi_data;
 ```
 
-Output:
+Output: 
 ```bash
 +---------------------+---------------------+---------+
 | max                 | min                 | max     |
@@ -253,7 +253,7 @@ docker run -it \
 
 With both database and pgAdmin running in the same network you can reopen [http://localhost:8080](http://localhost:8080) and create a Server:
 1. `General`: Name the server "Docker localhost"
-2. `Connection`: set Host name/address to "pg-database" + set username and password to "root" (as specified before)
+2. `Connection`: set Host name/address to `pg-database` + set username and password to `root` (as specified before)
 
 <div style="display: flex; justify-content: space-between;">
     <img src="imgs/server_1_general.png" alt="General" style="width: 48%;">
@@ -280,8 +280,8 @@ The [notebook](upload-data.ipynb) that populated the postgres-database and the [
 Converting to Python:
 ```bash
 jupyter nbconvert --to=script upload-data.ipynb
-
 ```
+
 A new file [ingest_data.py](ingest_data.py) is created and the exported code is adapted.
 
 The file requires many parameters that have to be given as arguments when calling the program:
@@ -419,7 +419,7 @@ docler-compose down
 
 With this, everythig is set up and we can finally work with the ingested database.
 
-`Note:` to make pgAdmin configuration persistent, create a folder `data_pgadmin`. Change its permission via
+**`Note`**: to make `pgAdmin` configuration persistent, create a folder `data_pgadmin`. Change its permission via
 ```bash
 sudo chown 5050:5050 data_pgadmin
 ```

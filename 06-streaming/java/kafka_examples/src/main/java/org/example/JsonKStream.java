@@ -12,6 +12,7 @@ import org.example.customserdes.CustomSerdes;
 import org.example.data.Ride;
 
 import java.util.Properties;
+import java.util.stream.Stream;
 
 public class JsonKStream {
     private Properties props = new Properties();

@@ -2,10 +2,10 @@
 # coding: utf-8
 
 import os
+import sys
 import argparse
-
 from time import time
-
+import pyarrow.parquet as pq
 import pandas as pd
 from sqlalchemy import create_engine
 
@@ -13,8 +13,8 @@ from sqlalchemy import create_engine
 def main(params):
     user = params.user
     password = params.password
-    host = params.host 
-    port = params.port 
+    host = params.host
+    port = params.port
     db = params.db
     table_name = params.table_name
     url = params.url
@@ -58,7 +58,7 @@ def main(params):
 
             t_end = time()
 
-            print('inserted another chunk, took %.3f second' % (t_end - t_start))
+            print("inserted another chunk, took %.3f second" % (t_end - t_start))
 
         except StopIteration:
             print("Finished ingesting data into the postgres database")

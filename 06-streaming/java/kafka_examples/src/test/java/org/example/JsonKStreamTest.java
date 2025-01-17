@@ -20,6 +20,7 @@ class JsonKStreamTest {
 
     @BeforeEach
     public void setup() {
+        // Defining the dummy/test input and output-topics
         props = new Properties();
         props.setProperty(StreamsConfig.APPLICATION_ID_CONFIG, "testing_count_application");
         props.setProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "dummy:1234");
