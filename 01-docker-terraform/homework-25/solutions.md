@@ -12,6 +12,10 @@
     - [Answer 4](#answer-4)
   - [Question 5. Three biggest pickup zones](#question-5-three-biggest-pickup-zones)
     - [Answer 5](#answer-5)
+  - [Question 6. Largest tip](#question-6-largest-tip)
+    - [Answer 6](#answer-6)
+  - [Question 7. Terraform Workflow](#question-7-terraform-workflow)
+    - [Answer 7](#answer-7)
 
 
 ## Question 1. Understanding docker first run
@@ -300,7 +304,103 @@ Consider only `lpep_pickup_datetime` when filtering by date.
 
 ### Answer 5
 
-Used Query:
+**`Query`**:
 ```sql
-TODO
+SELECT
+	z."Zone" AS zone,
+	ROUND(CAST(SUM(t.total_amount) AS numeric), 2) AS sum_amount
+FROM
+	green_taxi_trips AS t
+JOIN zones AS z
+	ON t."PULocationID" = z."LocationID"
+WHERE
+	DATE(t.lpep_pickup_datetime) = '2019-10-18'
+GROUP BY
+	z."Zone"
+HAVING
+	SUM(t.total_amount) > 13000;
+```
+
+**`Query Result`**:
+
+|     **`zone`**      | **`sum_amount`** |
+| ------------------- | ---------------- |
+| East Harlem North   |     18686.68     |
+| East Harlem South   |     16797.26     |
+| Morningside Heights |     13029.79     |
+
+
+***Results***: East Harlem North, East Harlem South, Morningside Heights
+
+
+## Question 6. Largest tip
+
+For the passengers picked up in October 2019 in the zone
+name "East Harlem North" which was the drop off zone that had
+the largest tip?
+
+Note: it's `tip` , not `trip`
+
+We need the name of the zone, not the ID.
+
+- Yorkville West
+- JFK Airport
+- East Harlem North
+- East Harlem South
+
+### Answer 6
+
+**`Query`**:
+```sql
+SELECT
+	zdo."Zone" AS dropoff_zone,
+	MAX(t.tip_amount) as max_tip
+FROM
+	green_taxi_trips AS t
+JOIN zones AS zpu
+	ON t."PULocationID" = zpu."LocationID"
+JOIN zones AS zdo
+	ON t."DOLocationID" = zdo."LocationID"
+WHERE
+	TO_CHAR(DATE(t.lpep_pickup_datetime), 'YYYY-MM') = '2019-10'
+	AND
+	zpu."Zone" = 'East Harlem North'
+GROUP BY
+	dropoff_zone
+ORDER BY
+	max_tip DESC
+LIMIT
+	1;
+```
+
+**`Query Result`**:
+
+| **`dropoff_zone`**  |   **`max_tip`**  |
+| ------------------- | ---------------- |
+|     JFK Airport     |       87.3       |
+
+
+
+## Question 7. Terraform Workflow
+
+Which of the following sequences, **respectively**, describes the workflow for: 
+1. Downloading the provider plugins and setting up backend,
+2. Generating proposed changes and auto-executing the plan
+3. Remove all resources managed by terraform`
+
+Answers:
+- terraform import, terraform apply -y, terraform destroy
+- teraform init, terraform plan -auto-apply, terraform rm
+- terraform init, terraform run -auto-approve, terraform destroy
+- terraform init, terraform apply -auto-approve, terraform destroy
+- terraform import, terraform apply -y, terraform rm
+
+
+### Answer 7
+```bash
+terraform init
+
+terraform apply -auto-approve
+
+terraform destroy
 ```
