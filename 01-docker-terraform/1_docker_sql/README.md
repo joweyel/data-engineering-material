@@ -435,6 +435,50 @@ services:
     ...
 ```
 
+## Section Summary
+
+The data ingestion was previously done when using the docker container without docker compose. In this summary section the docker-compose uses a network `pg-net` over which the running container can be accessed over.
+
+Start docker container for `Postgres` and `pgAdmin4`:
+```bash
+docker-compose up
+```
+
+Ingest `yellow_taxi_trips` data to the `ny_taxi` database:
+```bash
+URL="https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz"
+
+docker run -it \
+  --network=c \
+  taxi_ingest:v001 \
+    --user=root \
+    --password=root \
+    --host=pgdatabase \
+    --port=5432 \
+    --db=ny_taxi \
+    --tb=yellow_taxi_trips \
+    --url=${URL}
+```
+
+Ingest taxi zones lookup-table to the `ny_taxi` database:
+```bash
+URL="https://d37ci6vzurychx.cloudfront.net/misc/taxi+_zone_lookup.csv"
+
+docker run -it \
+  --network=pg-net \
+  taxi_ingest:v001 \
+    --user=root \
+    --password=root \
+    --host=pgdatabase \
+    --port=5432 \
+    --db=ny_taxi \
+    --tb=zones \
+    --url=${URL}
+```
+
+Now the dockerized database should be populated with the downloaded data.
+
+
 ## 1.2.6 - SQL Refresher
 Start pgadmin and the postgres-database with:
 ```bash
@@ -469,7 +513,7 @@ Next step is to join the `yellow_taxi_trips` and `zones` in order to map the num
 
 On way of doing this is the following:
 ```sql
--- Inner JOIN by hand
+-- Inner JOIN "by hand"
 SELECT
 	tpep_pickup_datetime,
 	tpep_dropoff_datetime,
@@ -616,7 +660,7 @@ SELECT
 FROM 
 	yellow_taxi_trips AS t 
 GROUP BY
-	1, 2 -- groupin by row 1 and 2 
+	1, 2 -- groupin by row 1 and 2
 ORDER BY
 	"day" ASC, -- day from lowest to highest
 	"DOLocationID" ASC;  -- dropoff location id from low to high 

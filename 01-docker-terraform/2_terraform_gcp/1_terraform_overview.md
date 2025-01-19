@@ -56,8 +56,8 @@
     * Removes your stack from the Cloud
 
 
-### Terraform Workshop to create GCP Infra
-Continue [here](./terraform): `01-docker-terraform/1_terraform_gcp/terraform`
+### Terraform Workshop to create GCP Infrastructure
+Continue [here](./terraform): `01-docker-terraform/2_terraform_gcp/terraform`
 
 
 ### References
