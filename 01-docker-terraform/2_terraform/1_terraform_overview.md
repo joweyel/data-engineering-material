@@ -57,8 +57,11 @@
 
 
 ### Terraform Workshop to create GCP Infrastructure
-Continue [here](./terraform): `01-docker-terraform/2_terraform_gcp/terraform`
+Continue [here](./terraform_gcp): `01-docker-terraform/2_terraform/terraform_gcp/`
 
+### Terraform Workshop to create GCP Infrastructure
+Continue [here](./terraform_aws): `01-docker-terraform/2_terraform/terraform_aws/`
 
 ### References
-https://learn.hashicorp.com/collections/terraform/gcp-get-started
+- `GCP`: https://learn.hashicorp.com/collections/terraform/gcp-get-started
+- `AWS`: https://developer.hashicorp.com/terraform/tutorials/aws-get-started

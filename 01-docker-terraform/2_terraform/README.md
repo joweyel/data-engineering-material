@@ -15,6 +15,10 @@ Ressources taken from the course repository [here](https://github.com/DataTalksC
     * [Only for Windows](windows.md) - Steps 4 & 5
 2. [IAM / Access specific to this course](2_gcp_overview.md#setup-for-access)
 
-### Terraform Workshop for GCP Infra
+#### Terraform Workshop for GCP Infra
 Your setup is ready!
-Now head to the [terraform](terraform) directory, and perform the execution steps to create your infrastructure.
+Now head to the [terraform_gcp](terraform_gcp) directory, and perform the execution steps to create your infrastructure.
+
+
+### AWS setup
+1. 

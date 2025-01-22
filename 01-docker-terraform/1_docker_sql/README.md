@@ -265,8 +265,10 @@ After saving the configuration the database from the postgres-container will be 
 ![pgadmin_docker](imgs/pgadmin_docker.png)
 
 To query the connected database the query-tool of pgAdmin can be used:
+
 ![query_tool](imgs/query_tool.jpg)
 ![query](imgs/query.png)
+
 To query the database, `[F5]` is used.
 
 Another way to connect multiple docker-container in a network is to use `docker-compose`, which will be presented in following sections.
@@ -449,7 +451,7 @@ Ingest `yellow_taxi_trips` data to the `ny_taxi` database:
 URL="https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow/yellow_tripdata_2021-01.csv.gz"
 
 docker run -it \
-  --network=c \
+  --network=pg-net \
   taxi_ingest:v001 \
     --user=root \
     --password=root \
