@@ -1,8 +1,9 @@
 # AWS Overview
 
 ## Project infrastructure modules in AWS:
-- S3 Bucket: Data Lake
-- EC2 Instance: VM on AWS
+- `S3 Bucket`: Data Lake
+- `EC2 Instance`: VM on AWS
+- `AWS Glue Data catalog database`: empty database for AWS's managed ETL services
 
 
 ## Initial Setup

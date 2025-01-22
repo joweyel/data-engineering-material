@@ -4,7 +4,8 @@ Ressources taken from the course repository [here](https://github.com/DataTalksC
 
 ### Pre-Requisites
 1. Terraform client installation: https://www.terraform.io/downloads
-2. Cloud Provider account: https://console.cloud.google.com/ 
+2. Cloud Provider account Google: https://console.cloud.google.com/ 
+3. Cloud Provider account AWS: https://aws.amazon.com/
 
 ### Terraform Concepts
 [Terraform Overview](1_terraform_overview.md)
@@ -21,4 +22,5 @@ Now head to the [terraform_gcp](terraform_gcp) directory, and perform the execut
 
 
 ### AWS setup
-1. 
+1. [Setup for First-time](3_aws_overview.md#initial-setup)
+2. [IAM / Access specific to this course](3_aws_overview.md#Setting-up-aws-access-key-credentials-for-terraform)
