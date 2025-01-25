@@ -1,4 +1,4 @@
-## Local Setup for Terraform and GCP
+## Local Setup for Terraform, GCP and AWS
 
 Ressources taken from the course repository [here](https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/01-docker-terraform/1_terraform_gcp)
 

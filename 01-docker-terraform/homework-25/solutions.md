@@ -1,21 +1,21 @@
 # Homework 1
 
 - [Homework 1](#homework-1)
-  - [Question 1. Understanding docker first run](#question-1-understanding-docker-first-run)
-    - [Answer 1](#answer-1)
-  - [Question 2. Understanding Docker networking and docker-compose](#question-2-understanding-docker-networking-and-docker-compose)
-    - [Anaswer 2](#anaswer-2)
-  - [Prepare Postgres](#prepare-postgres)
-  - [Question 3. Trip Segmentation Count](#question-3-trip-segmentation-count)
-    - [Answer 3](#answer-3)
-  - [Question 4. Longest trip for each day](#question-4-longest-trip-for-each-day)
-    - [Answer 4](#answer-4)
-  - [Question 5. Three biggest pickup zones](#question-5-three-biggest-pickup-zones)
-    - [Answer 5](#answer-5)
-  - [Question 6. Largest tip](#question-6-largest-tip)
-    - [Answer 6](#answer-6)
-  - [Question 7. Terraform Workflow](#question-7-terraform-workflow)
-    - [Answer 7](#answer-7)
+	- [Question 1. Understanding docker first run](#question-1-understanding-docker-first-run)
+		- [Answer 1](#answer-1)
+	- [Question 2. Understanding Docker networking and docker-compose](#question-2-understanding-docker-networking-and-docker-compose)
+		- [Anaswer 2](#anaswer-2)
+	- [Prepare Postgres](#prepare-postgres)
+	- [Question 3. Trip Segmentation Count](#question-3-trip-segmentation-count)
+		- [Answer 3](#answer-3)
+	- [Question 4. Longest trip for each day](#question-4-longest-trip-for-each-day)
+		- [Answer 4](#answer-4)
+	- [Question 5. Three biggest pickup zones](#question-5-three-biggest-pickup-zones)
+		- [Answer 5](#answer-5)
+	- [Question 6. Largest tip](#question-6-largest-tip)
+		- [Answer 6](#answer-6)
+	- [Question 7. Terraform Workflow](#question-7-terraform-workflow)
+		- [Answer 7](#answer-7)
 
 
 ## Question 1. Understanding docker first run
@@ -249,7 +249,7 @@ WHERE
 	trip_distance > 10.0;
 ```
 
-- ***Results***: `104,802;  198,924;  109,603;  27,678;  35,189`
+- ***Results***: `104,802; 198,924; 109,603; 27,678; 35,189`
 
 
 ## Question 4. Longest trip for each day
