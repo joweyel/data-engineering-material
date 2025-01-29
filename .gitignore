@@ -196,3 +196,16 @@ terraform.rc
 
 # Ignoring Data Engineering Zoomcamp creds.
 dtc-de-*.json
+
+
+## Ignore archives and data
+# Archives
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.tar.xz
+# Data
+*.csv
+*.csv.gz
+*.parquet
