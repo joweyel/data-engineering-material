@@ -29,3 +29,39 @@
 - Scheduling and Backfills
 - Install Kestra on the Cloud and sync your Flows with Git
 
+
+## Getting to know Kestra
+
+To learn what Kestra is and how to use it, you should read the Kestra Blog and the accompanying videos on youtube.
+
+### Getting Started with Kestra
+- [Website](https://kestra.io/blogs/2024-04-05-getting-started-with-kestra)
+- [Video](https://youtu.be/a2BZ7vOihjg)
+
+#### Properties
+- Workflows are declared in yaml
+- Each flow requires 3 properties
+  - `id`: Name of the flow
+  - `namespace`: Environment for your flow
+  - `tasks`: List of tasks to execute in your flow
+
+Example flow:
+```yaml
+id: getting_started
+namespace: example
+tasks:
+  - id: hello_world
+    type: io.kestra.core.tasks.log.Log
+    message: Hello World!
+```
+
+#### 
+
+
+
+## ETL Pipelines with Postgres in Kestra
+
+On this section the used data (NYC Taxi data) will be obtained from here: https://github.com/DataTalksClub/nyc-tlc-data/releases.
+
+The goal is to load all the data and put it in one table.
+
