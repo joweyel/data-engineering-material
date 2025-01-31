@@ -55,7 +55,17 @@ tasks:
     message: Hello World!
 ```
 
-#### 
+#### Example Application
+-  Applications sends API request to github to ask number of stars that the Kestra Repo has
+- Sends the results from github every hour to discord
+
+```python
+import requests
+
+r = requests.get("https://api.github.com/repos/kestra-io/kestra")
+gh_stars = r.json()["stargazers_count"]
+print(gh_stars)
+```
 
 
 
