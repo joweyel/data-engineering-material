@@ -144,7 +144,7 @@ The very short videos in the playlist give a foundational knowledge of how kestr
 
 - [Documentation](https://kestra.io/docs/installation/docker-compose)
 
-A list of available Kestra Docker containers can be found in the dockumentation [here](https://kestra.io/docs/installation/docker#docker-image-tags). There is a major distinction between all the different Docker containers:
+A list of available Kestra Docker containers can be found in the documentation [here](https://kestra.io/docs/installation/docker#docker-image-tags). There is a major distinction between all the different Docker containers:
 - **All Plugins**: 
   - `kestra/kestra:*`
 - **No Plugins**: 
@@ -191,3 +191,123 @@ Accessing the ingested data with pgAdmin:
 ## 2.2.4 - Manage Scheduling and Backfills with Postgres in Kestra
 
 In this section we learn how the application of the flow can be automated using scheduling and how backfills can be used for missed schedules in the past.
+
+The flow used in this section is [`postgres_taxi_scheduled`](flows/postgres_taxi_scheduled.yaml)
+
+### Scheduling example
+The following example shows how cron-jobs are used to schedule Kestra runs
+
+```yaml
+...
+triggers:
+  # Run at first day of month at 9am
+  - id: green_schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 9 1 * *"
+    inputs:
+      taxi: green
+
+  # Run at first day of month at 10am
+  - id: yellow_schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 10 1 * *"
+    inputs:
+      taxi: yellow
+```
+
+### Backfills
+To fill missed data from previous schedules you can activate backfills in the previously defined triggers
+
+![backfill](images/kestra_backfill.jpg)
+
+Here you can see how the start and end of the backfill is specified. It is also advisable to add a label to the backfill execution to see which executions were backfilled:
+![backfill2](images/kestra_backfill_2.jpg)
+
+
+## 2.2.5 - Orchestrate dbt Models with Postgres in Kestra
+
+This section is to show the capabilities of Kestra with DBT (Data Build Tool), which will be covered in depth in a later part of the class. Up until now there was no "real" transformation of the data as it was just read in and then put in postgres tables.
+
+### Create DBT Workflow
+
+The Kastra-Flow that is used with DBT is [`postgres_taxi.yaml`](flows/postgres_dbt.yaml).
+
+Executing the Kestra-Flow will result in a bunch of new views and tables when looking at pgAdmin:
+
+
+
+## 2.2.6 - ETL Pipelines in Kestra: Google Cloud Platform
+
+For this part of the workflow-orchestration section you need to ...
+
+1. Create a project and name it like "kestra-workspace" or "kestra-project" or something different.
+2. Go to `IAM & admin` -> `[Service accounts]` and then click on `[+ Create Service Account]`
+3. Name the service account `zoomcamp`
+4. Grant the followin roles
+   - `Storage Admin`
+   - `BigQuery Admin`
+5. After creation, click on the new service account and go to the `KEYS` section
+6. Create a new private key in json format by clicking `ADD KEY`
+7. Dowload and save the key to a secure location on your computer
+8. Go to Kestra and create the a Kestra-Flow [`gcp_taxi`](flows/gcp_taxi.yaml) with this yaml-file.
+9. Create [`gcp_kv`](flows/gcp_kv.yaml)-workflow in Kestra and cusrtomize the key-value pairs except the `GCP_CREDS`-value part to your needs
+    - Running the flow will populate most of the key-value pairs that can then be used in the [`gcp_taxi`](flows/gcp_taxi.yaml)-flow
+10. Go to `[Namespaces]` on the left sidebar and choose `zoomcamp`-namespace. Then select `KV Store` on the top-bar
+    - You can now set the obtained credentials as key-value pair with `GCP_CREDS` as key and the obtained json-credentials as value.
+    
+With everything set up you now can execute the following flows in this order:
+1. [**`gcp_setup`**](flows/gcp_setup.yaml): To create GCP resources based on [**`gcp_kv`**](flows/gcp_kv.yaml)
+   - The Bucket and the BigQuery dataset should now be created on GCP
+2. [**`gcp_taxi`**](flows/gcp_taxi.yaml): Run ETL pipelines that uses GCS and BigQuery
+   - Here you have to set the taxi type, year and month and the rest will be done just as before
+
+## 2.2.7 - Manage Schedules and Backfills with BigQuery in Kestra
+
+- Adding schedules to BigQuery workflow
+- How to perform backfills
+
+The flow of this section is [`gcp_taxi_scheduled`](flows/gcp_taxi_scheduled.yaml).
+
+### Add Schedules
+
+The scheduling for GCP is pretty much the same as the offline version
+
+```yaml
+triggers:
+  # Runs at first day of month at 9am
+  - id: green_schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 9 1 * *"
+    inputs:
+      taxi: green
+  
+  # Runs at first day of month at 10am
+  - id: yellow_schedule
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 10 1 * *"
+    inputs:
+      taxi: yellow
+```
+
+The variable `file` now uses `trigger.date` instead of month and year and you only have to select the taxi type when executing the flow:
+```yaml
+variables:
+  file: "{{inputs.taxi}}_tripdata_{{trigger.date | date('yyyy-MM')}}.csv"
+  ...
+```
+
+### Run Backfills
+
+Same as with the offline variant
+
+![backfill2](images/kestra_backfill_2.jpg)
+
+
+## 2.2.8 - Orchestrate dbt Models with BigQuery in Kestra
+
+- The Kestra-Flow used here is [`gcp_dbt`](flows/gcp_dbt.yaml). 
+- There is not much to do in terms of configuration due to the setup done by the flow [`gcp_setup`](flows/gcp_setup.yaml).
+- Just clicking `Execute` is enough to run the dbt models and everything will be done in BigQuery.
+
+
+## Homework

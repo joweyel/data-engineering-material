@@ -66,6 +66,7 @@ tasks:
               congestion_surcharge   double precision
           );
 
+      # Create staging table to initially load obtained data to (1st step of loading the data)
       - id: yellow_create_staging_table
         type: io.kestra.plugin.jdbc.postgresql.Queries
         sql: |
@@ -92,6 +93,7 @@ tasks:
               congestion_surcharge   double precision
           );
 
+      # Clearing out the staging table before repopulation with new data
       - id: yellow_truncate_staging_table
         type: io.kestra.plugin.jdbc.postgresql.Queries
         sql: |
@@ -105,6 +107,7 @@ tasks:
         header: true
         columns: [VendorID,tpep_pickup_datetime,tpep_dropoff_datetime,passenger_count,trip_distance,RatecodeID,store_and_fwd_flag,PULocationID,DOLocationID,payment_type,fare_amount,extra,mta_tax,tip_amount,tolls_amount,improvement_surcharge,total_amount,congestion_surcharge]
 
+      # Add md5 hash of row to row to avoid adding row multiple times
       - id: yellow_add_unique_id_and_filename
         type: io.kestra.plugin.jdbc.postgresql.Queries
         sql: |
@@ -120,7 +123,8 @@ tasks:
               COALESCE(CAST(trip_distance AS text), '')      
             ),
             filename = '{{render(vars.file)}}';
-
+      
+      # Merging staging and overall table (inserts row if unique_row_id is not yet present)
       - id: yellow_merge_data
         type: io.kestra.plugin.jdbc.postgresql.Queries
         sql: |
@@ -173,6 +177,7 @@ tasks:
               congestion_surcharge   double precision
           );
 
+      # Create staging table to initially load obtained data to (1st step of loading the data)
       - id: green_create_staging_table
         type: io.kestra.plugin.jdbc.postgresql.Queries
         sql: |
@@ -214,6 +219,7 @@ tasks:
         header: true
         columns: [VendorID,lpep_pickup_datetime,lpep_dropoff_datetime,store_and_fwd_flag,RatecodeID,PULocationID,DOLocationID,passenger_count,trip_distance,fare_amount,extra,mta_tax,tip_amount,tolls_amount,ehail_fee,improvement_surcharge,total_amount,payment_type,trip_type,congestion_surcharge]
 
+      # Add md5 hash of row to row to avoid adding row multiple times
       - id: green_add_unique_id_and_filename
         type: io.kestra.plugin.jdbc.postgresql.Queries
         sql: |
@@ -229,7 +235,8 @@ tasks:
               COALESCE(CAST(trip_distance AS text), '')      
             ),
             filename = '{{render(vars.file)}}';
-
+      
+      # Merging staging and overall table (inserts row if unique_row_id is not yet present)
       - id: green_merge_data
         type: io.kestra.plugin.jdbc.postgresql.Queries
         sql: |
@@ -254,10 +261,11 @@ tasks:
     type: io.kestra.plugin.core.storage.PurgeCurrentExecutionFiles
     description: To avoid cluttering your storage, we will remove the downloaded files
 
+# Postgres Plugin to connect to correct database
 pluginDefaults:
   - type: io.kestra.plugin.jdbc.postgresql
     values:
-      url: jdbc:postgresql://host.docker.internal:5432/postgres-zoomcamp
+      url: jdbc:postgresql://postgres_zoomcamp:5432/postgres-zoomcamp
       username: kestra
       password: k3str4
 
