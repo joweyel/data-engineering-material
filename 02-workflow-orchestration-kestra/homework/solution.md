@@ -137,3 +137,5 @@ How would you configure the timezone to New York in a Schedule trigger?
 - Add a `location` property set to `New_York` in the `Schedule` trigger configuration
 
 #### Answer 6
+
+- Add a `timezone` property set to `America/New_York` in the `Schedule` trigger configuration
