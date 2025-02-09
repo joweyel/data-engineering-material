@@ -13,6 +13,9 @@
 
 ## OLAP vs. OLTP
 
+- **`OLTP`**: Online Transaction Processing
+- **`OLAP`**: Online Analytical Processing
+
 ![olap_vs_oltp](images/olap_oltp.jpg)
 
 ## What is a data warehouse?
@@ -72,7 +75,7 @@ CREATE OR REPLACE TABLE taxi-rides-ny.nytaxi.yellow_tripdata_non_partitoned AS
 SELECT * FROM taxi-rides-ny.nytaxi.external_yellow_tripdata;
 ```
 
-### BigQuery costs
+### BigQuery Cost
 - On demand pricing
     - 1 TB of data processing is $5
 - Flat rate pricing
@@ -85,6 +88,7 @@ SELECT * FROM taxi-rides-ny.nytaxi.external_yellow_tripdata;
 ### Partitioning in BigQuery
 - Dividing a table by a certain key (e.g. the date)
 - Can imporove BigQuery performance by only loading data that is required for a specified key (like the date)
+- Checking the size of partitions can also help identify biases in the data (if one partition has much more / less data)
 
 ![BQ_part](images/partition.jpg)
 
@@ -138,6 +142,7 @@ FROM taxi-rides-ny.nytaxi.yellow_tripdata_partitoned_clustered
 WHERE DATE(tpep_pickup_datetime) BETWEEN '2019-06-01' AND '2020-12-31'
   AND VendorID=1;
 ```
+
 
 <a id="partitioning-and-clustering"></a>
 ## 3.2 Partitioning and clustering
@@ -204,15 +209,17 @@ As data is added to a clustered table
 To maintain the performance characteristics of a clustered table
 - BigQuery  performs automatic re-clustering in the background to restore the sort property of the table
 - For partitioned tables, clustering is maintained for data within the scope of each partition
+- Does not cost the user anything
+
 
 <a id="bigquery-best-practices"></a>
 ## 3.3 BigQuery best practices for ...
 
 ### ... Cost Reduction
-- Avoid `SELECT *`
+- Avoid `SELECT *` (because of columnar storage type)
 - Price your queries before running them
 - Using clustered or partitioned tables
-- Using streaming inerts with caution
+- Using streaming inserts with caution
 - Materializes query results in stages
 
 ### ... Query Performance
@@ -231,6 +238,7 @@ To maintain the performance characteristics of a clustered table
   - `First table`: Largest table in terms of rows
   - `Second table`: talbe with the fewest rows
   - Then all other tables ordered by decreasing size
+
 
 <a id="internals-of-bigquery"></a>
 ## 3.4 Internals of BigQuery
@@ -325,7 +333,7 @@ Task for the ML model: Predicting tip of a trip
 
 Obtaining the table that is used for further computations:
 ```sql
--- SELECT THE COLUMNS INTERESTED FOR YOU
+-- SELECT THE COLUMNS INTERESTING FOR YOU
 SELECT 
   passenger_count, trip_distance, PULocationID, DOLocationID, 
   payment_type, fare_amount, tolls_amount, tip_amount
