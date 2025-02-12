@@ -157,14 +157,11 @@ Choose the answer which most closely matches.</br>
 SELECT VendorID
 FROM `kestra-workspace.ny_taxi_hw3.yellow_tripdata_non_partitoned`
 WHERE DATE(tpep_dropoff_datetime) BETWEEN "2024-03-01" AND "2024-03-15";
--- Result: 310.31 MB
-
 
 --- Optimized Table (partitioned)
 SELECT VendorID
 FROM `kestra-workspace.ny_taxi_hw3.yellow_tripdata_optimized_1`
 WHERE DATE(tpep_dropoff_datetime) BETWEEN "2024-03-01" AND "2024-03-15";
--- Result: 26.84 MB
 ```
 
 
