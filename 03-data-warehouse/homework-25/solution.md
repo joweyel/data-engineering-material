@@ -52,32 +52,47 @@ What is the **estimated amount** of data that will be read when this query is ex
 
 Query (External Table):
 ```sql
-SELECT 
-    COUNT(DISTINCT PULocationID)
-FROM
-    `kestra-workspace.ny_taxi_hw3.external_yellow_tripdata`;
+SELECT COUNT(DISTINCT PULocationID)
+FROM `kestra-workspace.ny_taxi_hw3.external_yellow_tripdata`;
 ```
 
 Query (Materialized Table):
 ```sql
-SELECT 
-    COUNT(DISTINCT PULocationID)
-FROM
-    `kestra-workspace.ny_taxi_hw3.yellow_tripdata_non_partitoned`;
+SELECT COUNT(DISTINCT PULocationID)
+FROM `kestra-workspace.ny_taxi_hw3.yellow_tripdata_non_partitoned`;
 ```
 
 
 ## Question 3
-Write a query to retrieve the `PULocationID` from the table (not the external table) in BigQuery. Now write a query to retrieve the `PULocationID` and DOLocationID on the same table. Why are the estimated number of Bytes different?
-- BigQuery is a columnar database, and it only scans the specific columns requested in the query. Querying two columns (`PULocationID`, `DOLocationID`) requires 
-reading more data than querying one column (`PULocationID`), leading to a higher estimated number of bytes processed.
-- BigQuery duplicates data across multiple storage partitions, so selecting two columns instead of one requires scanning the table twice, 
+Write a query to retrieve the `PULocationID` from the table (not the external table) in BigQuery. Now write a query to retrieve the `PULocationID` and `DOLocationID` on the same table. Why are the estimated number of Bytes different?
+1. BigQuery is a columnar database, and it only scans the specific columns requested in the query. Querying two columns (`PULocationID`, `DOLocationID`) requires reading more data than querying one column (`PULocationID`), leading to a higher estimated number of bytes processed.
+2. BigQuery duplicates data across multiple storage partitions, so selecting two columns instead of one requires scanning the table twice, 
 doubling the estimated bytes processed.
-- BigQuery automatically caches the first queried column, so adding a second column increases processing time but does not affect the estimated bytes scanned.
-- When selecting multiple columns, BigQuery performs an implicit join operation between them, increasing the estimated bytes processed
+3. BigQuery automatically caches the first queried column, so adding a second column increases processing time but does not affect the estimated bytes scanned.
+4. When selecting multiple columns, BigQuery performs an implicit join operation between them, increasing the estimated bytes processed
 
 ### Answer 3
-TODO
+1. BigQuery is a columnar database, and it only scans the specific columns requested in the query. Querying two columns (`PULocationID`, `DOLocationID`) requires reading more data than querying one column (`PULocationID`), leading to a higher estimated number of bytes processed.
+
+
+```sql
+SELECT PULocationID 
+FROM `kestra-workspace.ny_taxi_hw3.yellow_tripdata_non_partitoned`;
+```
+- **Duration**: 3 sec
+- **Bytes processed**: 155.12 MB
+- **Bytes billed**: 156 MB
+- **Slot milliseconds**: 28637
+
+```sql
+SELECT PULocationID, DOLocationID
+FROM `kestra-workspace.ny_taxi_hw3.yellow_tripdata_non_partitoned`;
+```
+- **Duration**: 4 sec
+- **Bytes processed**: 310.24 MB
+- **Bytes billed**: 311 MB
+- **Slot milliseconds**: 30572
+
 
 
 ## Question 4
@@ -110,8 +125,68 @@ What is the best strategy to make an optimized table in BigQuery if your query w
 
 - Partition by `tpep_dropoff_datetime` and Cluster on `VendorID`
 
+
 Query:
 ```sql
--- TODO
+-- Partition by `tpep_dropoff_datetime` and Cluster on `VendorID`
+CREATE OR REPLACE TABLE `kestra-workspace.ny_taxi_hw3.yellow_tripdata_optimized_1`
+PARTITION BY DATE(tpep_dropoff_datetime)
+CLUSTER BY VendorID AS 
+SELECT * FROM `kestra-workspace.ny_taxi_hw3.yellow_tripdata_non_partitoned`;
 ```
 
+
+## Question 6
+Write a query to retrieve the distinct `VendorID`s between `tpep_dropoff_datetime` `2024-03-01` and `2024-03-15` (inclusive)</br>
+
+Use the materialized table you created earlier in your from clause and note the estimated bytes. Now change the table in the from clause to the partitioned table you created for question 5 and note the estimated bytes processed. What are these values? </br>
+
+Choose the answer which most closely matches.</br> 
+
+- 12.47 MB for non-partitioned table and 326.42 MB for the partitioned table
+- 310.24 MB for non-partitioned table and 26.84 MB for the partitioned table
+- 5.87 MB for non-partitioned table and 0 MB for the partitioned table
+- 310.31 MB for non-partitioned table and 285.64 MB for the partitioned table
+
+### Answer 6
+
+- 310.24 MB for non-partitioned table and 26.84 MB for the partitioned table
+
+```sql
+--- Un-Optimized Table (non-partitioned)
+SELECT VendorID
+FROM `kestra-workspace.ny_taxi_hw3.yellow_tripdata_non_partitoned`
+WHERE DATE(tpep_dropoff_datetime) BETWEEN "2024-03-01" AND "2024-03-15";
+-- Result: 310.31 MB
+
+
+--- Optimized Table (partitioned)
+SELECT VendorID
+FROM `kestra-workspace.ny_taxi_hw3.yellow_tripdata_optimized_1`
+WHERE DATE(tpep_dropoff_datetime) BETWEEN "2024-03-01" AND "2024-03-15";
+-- Result: 26.84 MB
+```
+
+
+## Question 7
+Where is the data stored in the External Table you created?
+
+- Big Query
+- Container Registry
+- GCP Bucket
+- Big Table
+
+### Answer 7
+
+- `GCP Bucket`
+
+
+
+## Question 8
+It is best practice in BigQuery to always cluster your data:
+- True
+- False
+
+### Answer 8
+
+- `False`
