@@ -1,5 +1,14 @@
 # Week 4: Analytics Engineering
 
+Create Conda environment for local dbt:
+```bash
+# Create environment
+conda create -n dbt-env python=3.9 pip
+conda activate dbt-env
+pip install dbt-core dbt-postgres dbt-bigquery dbt-redshift
+```
+
+
 ## 4.1.1 - Analytics Engineering Basics
 
 ### 1 - What ist `Analytics Engineering`
