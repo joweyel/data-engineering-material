@@ -63,6 +63,7 @@ Due to these advantages, batch processing is used in 80% of the data engineering
 
 
 **`Stream`** processing data on the fly
+
 ![w5_2_stream](images/w5_2_stream.jpg)
 
 
@@ -79,6 +80,7 @@ Spark is an open-source multi-language (Java, Scala, Python, ...) unified analyt
 If data is located in a data lake and can be processed by SQL alone, then tools like `Hive`, `Presto`, `Athena`, etc. are used. If the data requires more granular processing and is used for a more complex use-case (like Machine Learning), Spark is the better choice, because it provides more flexibility in the process. However there is also the possibility to use both SQL processing and Spark. An example can be seen here:
 
 ![w5_5_spark_use2](images/w5_5_spark_use2.jpg)
+
 **Steps**:
 
 1. Raw data is saved to data lake
@@ -257,10 +259,17 @@ The practical application of the concepts of this section can be found in the no
 - Getting data from spark with SQL queries
   ```python
   spark.sql("""
-        SELECT col, COUNT(1) as count FROM table
-        GROUP BY col;
-    """).show()
+    SELECT col, COUNT(1) as count FROM table
+    GROUP BY col;
+  """).show()
   ```
+- Saving / writing results as specified amount of files. Coalescing of the dataframe reduces the number of partitions when saving
+  ```python
+  n = ...           # Number of output files the partitions should be put into
+  save_path = ...   # Path where data should be saved to
+  df_result.coalesce(n).write.parquet(save_path)
+  ```
+
 
 ## 5.4 Spark Internals
 
@@ -396,7 +405,7 @@ This approach allows Spark to perform the join operation in a distributed and pa
 - Operations on RDD: map, filter, reduceByKey
 - From RDD to DataFrame
 
-The code if this section can be found in the notebook [spark_rdd.ipnb](code/spark_rdd.ipnb)
+The code if this section can be found in the notebook [spark_rdd.ipynb](code/spark_rdd.ipynb)
 
 - RDD's are on layer of abstraction lower than dataframes. 
 - Dataframes in spark use RDD's in the background.
@@ -409,7 +418,7 @@ The code if this section can be found in the notebook [spark_rdd.ipnb](code/spar
 
 - Using mapPartition on RDD's
 
-The code if this section can be found in the notebook [spark_rdd.ipnb](code/spark_rdd.ipnb)
+The code if this section can be found in the notebook [spark_rdd.ipynb](code/spark_rdd.ipynb)
 
 
 In Spark, `mapPartitions` is an operation on RDDs. It is an advanced version of the map transformation that allows you to process each partition of the RDD independently. The primary difference between map and `mapPartitions` is that map operates on individual elements of the RDD, while `mapPartitions` processes entire partitions at once.

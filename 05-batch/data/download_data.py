@@ -2,7 +2,7 @@ import os
 
 URL_PREFIX = "https://d37ci6vzurychx.cloudfront.net/trip-data/{service}_tripdata_{year}-{month:02}.parquet"
 
-def download(service, year):
+def download(service: str, year: int) -> None:
 
     for m in range(1, 13):
         fmonth = f"{m:02d}"
