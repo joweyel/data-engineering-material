@@ -235,3 +235,109 @@ docker build -t test:pandas .
 - `test:pandas`: name and tag of new docker image
 - `.`: context is current folder `.` (where to look for Docker Image definititon / Dockerfile)
 
+
+## Running PostgreSQL with Docker
+
+- Dockerized version of PostgreSQL does not require installation, since it is created with Dockerfile / obtained from image
+- Only requires environment-variables as well as a volume for storing data
+
+Example for running PostgreSQL in Docker container:
+
+```bash
+docker run -it --rm \
+    -e POSTGRES_USER="root" \
+    -e POSTGRES_PASSWORD="root" \
+    -e POSTGRES_DB="ny_taxi" \
+    -v ny_taxi_postgres_data:/var/lib/postgresql \
+    -p 5432:5432 \
+    postgres:18
+```
+
+Setting environement variables with `-e`:
+
+- `-e POSTGRES_USER="root"`
+- `-e POSTGRES_PASSWORD="root"`
+- `-e POSTGRES_DB="ny_taxi"`
+
+Create docker-volume `ny_taxi_postgres_data` with `-v ny_taxi_postgres_data:/var/lib/postgresql`:
+- Is persistent (not ephemoral) where data is saved to
+- Different from mounting a folder, where the folder path has to be provided
+
+Port-Mapping with `-p 5432:5432`:
+- Maps container-internal port 5432 (default PostgreSQL port) to the outside of the container also at port 5432
+- PostgreSQL is accessessible on host at http://localhost:5432
+
+After the container was pulled and has started the database is ready to be used. For accessing the database with Python the tool `pgcli` can be used and installed with `uv`:
+
+```bash
+uv add --dev pgcli
+```
+The `--dev` flag specifies that the installed dependency is a "developement" dependency and not "production" dependency. In the final deployment the cli-tool `pgcli` for postgres will not be used, since it is mostly required for accessing a database via the cli.
+
+Futhermore, to finally connect to the running PostgreSQL Docker container you have to use the commmand here:
+```bash
+uv run pgcli -h localhost -p 5432 -u root -d ny_taxi
+```
+- `-h`: Host-URL -> Here localhost
+- `-p 5432`: Port of postgres DB
+- `-u root`: DB username
+- `-d ny_taxi` : DB name
+
+Use `\dt` for listing all tables in the `ny_taxi` database. Then create a new table `test`:
+
+```sql
+CREATE TABLE test (id INTEGER, name VARCHAR(50));
+```
+
+Now the new (empty) table can be queried:
+```sql
+SELECT * FROM test;
+```
+
+Result:
+```
++----+------+
+| id | name |
+|----+------|
++----+------+
+SELECT 0
+Time: 0.009s
+```
+
+Insert data, show data and close the cli tool:
+```sql
+INSERT INTO test VALUES(1, 'Hello Docker');
+
+SELECT * FROM test;
+
+\q
+```
+
+Output:
+```bash
+root@localhost:ny_taxi> INSERT INTO test VALUES(1, 'Hello Docker');
+ 
+INSERT 0 1
+Time: 0.006s
+root@localhost:ny_taxi> SELECT * FROM test;
+ 
++----+--------------+
+| id | name         |
+|----+--------------|
+| 1  | Hello Docker |
++----+--------------+
+SELECT 1
+Time: 0.008s
+```
+
+## Using Jupyter Notebooks for Python code
+
+Installing jupyter:
+```bash
+uv add --dev jupyter 
+```
+
+Start jupyter notebook:
+```bash
+uv run jupyter notebook
+```
