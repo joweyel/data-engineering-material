@@ -370,3 +370,10 @@ Install `SQLAlchemy`:
 uv add sqlalchemy psycopg2-binary
 ```
 
+See section "**Connect to Postgres DB with `SQLAlchemy`**" in [`notebook.ipynb`](pipeline/notebook.ipynb)
+
+The next step after ingesting the data to the dockerized pg-database is to create a python script from the notebook. Scripts are much better suited to be used in data pipelines.
+
+```bash
+uv run jupyter nbconvert --to=script notebook.ipynb
+```
