@@ -190,3 +190,48 @@ uv run python3 pipeline.py 12
 # 1    2               4     12
 # hello pipeline, month=12
 ```
+
+### Dockerfile for creating your own custom image
+
+- **Source**: [`Dockerfile`](pipeline/Dockerfile)
+
+<details>
+
+<summary><b>Dockerfile</b></summary>
+
+```Dockerfile
+FROM python:3.13.11-slim
+
+# Copy from existing Docker image the folder /uv to /bin
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin
+
+# Setting workdirectory 
+WORKDIR /code
+
+# Puts uv's python binary in path (no `uv run` needed in entrypoint)
+ENV PATH="/code/.venv/bin:$PATH"
+
+COPY pyproject.toml .python-version uv.lock ./
+
+# Install dependencies specified in uv.lock files
+RUN uv sync --locked
+
+
+# Copy file into container
+COPY pipeline.py .
+
+# Executes this command upon entering container
+ENTRYPOINT [ "python3", "pipeline.py" ]
+```
+
+</details>
+
+
+To create the image use:
+```bash
+docker build -t test:pandas .
+```
+- `-t` for setting image identifier / tag
+- `test:pandas`: name and tag of new docker image
+- `.`: context is current folder `.` (where to look for Docker Image definititon / Dockerfile)
+
