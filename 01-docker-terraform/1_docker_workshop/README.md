@@ -332,6 +332,8 @@ Time: 0.008s
 
 ## Using Jupyter Notebooks for Python code
 
+Jupyter is interactive environment wher python code can be executed in blocks. It is alos possible to use text cells that follow markdown-formatting rules.
+
 Installing jupyter:
 ```bash
 uv add --dev jupyter 
@@ -341,3 +343,30 @@ Start jupyter notebook:
 ```bash
 uv run jupyter notebook
 ```
+
+On your local computer this command will open a new tab in the browser. In codespaces a port will be forwarded that you can see in the Ports tab of the VS Code instance on Github.
+
+### Create Notebook
+
+- Loading csv is more work than loading parquet
+  - Parquet has already a pre-defined data-schedma but csv does not
+
+- `[File]` > `[New]` > `[Notebook]`
+- Rename to notebook
+- All further explanations are in the notebook
+- The notebook: [`notebook.ipynb`](pipeline/notebook.ipynb)
+
+### Ingesting Data into Postgres
+
+Steps in the Jupyter Notebook:
+
+1. Download the CSV file
+2. Read dataframe in chunks with `pandas`
+3. Convert datetime columns
+4. Insert data into PostgreSQL using `SQLAlchemy`
+
+Install `SQLAlchemy`:
+```bash
+uv add sqlalchemy psycopg2-binary
+```
+
