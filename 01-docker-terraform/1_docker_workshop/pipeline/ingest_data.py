@@ -79,15 +79,15 @@ def ingest_data(
     
     
 @click.command()
-@click.option("--pg_user", required=True, help="PostgreSQL username")
-@click.option("--pg_pass", required=True, help="PostgreSQL password")
-@click.option("--pg_host", required=True, help="PostgreSQL host")
-@click.option("--pg_port", required=True, type=int, help="PostgreSQL port")
-@click.option("--pg_db", required=True, help="PostgreSQL database name")
+@click.option("--pg-user", required=True, help="PostgreSQL username")
+@click.option("--pg-pass", required=True, help="PostgreSQL password")
+@click.option("--pg-host", required=True, help="PostgreSQL host")
+@click.option("--pg-port", required=True, type=int, help="PostgreSQL port")
+@click.option("--pg-db", required=True, help="PostgreSQL database name")
 @click.option("--year", required=True, type=int, help="Year of taxi data")
 @click.option("--month", required=True, type=int, help="Month of taxi data")
 @click.option("--chunksize", default=100000, type=int, help="Chunk size for ingestion")
-@click.option("--target_table", required=True, help="Target table name in database")
+@click.option("--target-table", required=True, help="Target table name in database")
 def run(pg_user, pg_pass, pg_host, pg_port, pg_db, year, month, chunksize, target_table):
     engine = create_engine(f"postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}")
     url_prefix = "https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow"

@@ -16,7 +16,7 @@ RUN uv sync --locked
 
 
 # Copy file into container
-COPY pipeline.py .
+COPY ingest_data.py .
 
 # Executes this command upon entering container
-ENTRYPOINT [ "python3", "pipeline.py" ]
+ENTRYPOINT [ "python3", "ingest_data.py" ]

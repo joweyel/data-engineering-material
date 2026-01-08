@@ -372,6 +372,8 @@ uv add sqlalchemy psycopg2-binary
 
 See section "**Connect to Postgres DB with `SQLAlchemy`**" in [`notebook.ipynb`](pipeline/notebook.ipynb)
 
+## Using Docker-Container for Data-Ingestion
+
 The next step after ingesting the data to the dockerized pg-database is to create a python script from the notebook. Scripts are much better suited to be used in data pipelines.
 
 ```bash
@@ -540,4 +542,116 @@ root@localhost:ny_taxi> SELECT COUNT(1) FROM yellow_taxi_data;
 SELECT 1
 Time: 0.099s
 root@localhost:ny_taxi>
-``
+```
+
+The ingest script until now ran with uv, however also the ingest script should be dockerized for much better portability. For this a new docker container is created:
+
+```bash
+docker build -t taxi_ingest:v001 .
+```
+
+Run the container for data-ingestion:
+```bash
+docker run -it --rm \
+  taxi_ingest:v001 \
+    --pg-user=root \
+    --pg-pass=root \
+    --pg-host=localhost \
+    --pg-port=5432 \
+    --pg-db=ny_taxi \
+    --target-table=yellow_taxi_trips_2021_1 \
+    --year 2021 \
+    --month 1 \
+    --chunksize=100000
+```
+
+This will fail, since the ingestion container cant connet to the same localhost where the data is stores. For this a docker network is needed. 
+
+Create docker network:
+```bash
+docker network create pg-network
+```
+This network can now be specified in docker run command and connecect all container that use the same network. The new versions of the docker commands are as follows:
+
+```bash
+docker run -it --rm \
+    -e POSTGRES_USER="root" \
+    -e POSTGRES_PASSWORD="root" \
+    -e POSTGRES_DB="ny_taxi" \
+    -v ny_taxi_postgres_data:/var/lib/postgresql \
+    -p 5432:5432 \
+    --network=pg-network \
+    --name pgdatabase \
+    postgres:18
+```
+
+```bash
+docker run -it --rm \
+  --network=pg-network \
+  taxi_ingest:v001 \
+    --pg-user=root \
+    --pg-pass=root \
+    --pg-host=pgdatabase \
+    --pg-port=5432 \
+    --pg-db=ny_taxi \
+    --target-table=yellow_taxi_trips_2021_1 \
+    --year 2021 \
+    --month 1 \
+    --chunksize=100000
+```
+The `taxi_ingest` container will now connect to the docker container **`pgdatabase`** that is visible inside the docker network `pg-network`.
+
+
+### pgAdmin as Graphical Database UI
+
+For a proper ui for interacting with the database the program **`pgAdmin`** is used:
+
+```bash
+docker run -it \
+  -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+  -e PGADMIN_DEFAULT_PASSWORD="root" \
+  -v pgadmin_data:/var/lib/pgadmin \
+  -p 8085:80 \
+  --network=pg-network \
+  --name pgadmin \
+  dpage/pgadmin4
+```
+
+This creates but does not delete the container after creation. The container can be "re-started" with (this should take a shiort while):
+```bash
+docker start pgadmin
+```
+
+Open pgadmin ui at http://localhost:8085
+
+
+In pgAdmin
+
+- Create a server in pgadmin
+- Connect to db with credentials
+- Open Query Tool
+
+```sql
+-- Test code
+SELECT
+	*
+FROM
+	public.yellow_taxi_trips_2021_1
+LIMIT
+	10;
+```
+
+### Docker-Compose
+
+- Starts multiple docker container with one command
+- Can handle configuration with a single file but still references Images / Dockerfiles of used container
+
+
+<details>
+
+<summary><b>docker-compose.yaml</b></summary>
+
+```yml
+---
+```
+<details>
