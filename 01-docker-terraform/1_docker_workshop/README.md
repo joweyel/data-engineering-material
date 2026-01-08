@@ -729,11 +729,12 @@ flowchart TB
 
         Vol1[(ny_taxi_postgres_data)]
         Vol2[(pgadmin_data)]
+        CLI["pgcli (Host CLI)"]
+        Browser["Browser"]
     end
 
     subgraph External["External"]
         GitHub[("GitHub Releases<br/>NYC Taxi Data")]
-        Browser["Browser"]
     end
 
     %% Connections
@@ -747,7 +748,7 @@ flowchart TB
 
     %% Host port mappings
     Browser -->|"localhost:8085"| PGUI
-    Browser -->|"localhost:5432<br/>(pgcli)"| PGDB
+    CLI -->|"localhost:5432"| PGDB
 
     %% Styling
     style Network fill:#1976d2,stroke:#1565c0,color:#fff
