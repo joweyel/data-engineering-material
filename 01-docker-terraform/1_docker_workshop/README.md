@@ -652,6 +652,118 @@ LIMIT
 <summary><b>docker-compose.yaml</b></summary>
 
 ```yml
----
+services:
+  pgdatabase:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: "root"
+      POSTGRES_PASSWORD: "root"
+      POSTGRES_DB: "ny_taxi"
+    volumes:
+      - ny_taxi_postgres_data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    networks:
+      - pg-net
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@admin.com"
+      PGADMIN_DEFAULT_PASSWORD: "root"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    ports:
+      - "8085:80"
+    networks:
+      - pg-net
+
+networks:
+  pg-net:
+    name: pg-net
+
+volumes:
+  ny_taxi_postgres_data:
+  pgadmin_data:
 ```
-<details>
+
+</details>
+
+
+Ingest the data with this command:
+```bash
+docker run -it --rm \
+  --network=pg-net \
+  taxi_ingest:v001 \
+    --pg-user=root \
+    --pg-pass=root \
+    --pg-host=pgdatabase \
+    --pg-port=5432 \
+    --pg-db=ny_taxi \
+    --target-table=yellow_taxi_trips_2021_1 \
+    --year 2021 \
+    --month 1 \
+    --chunksize=100000
+```
+
+### Docker Container Architecture
+
+The following diagram shows how the Docker containers interact:
+
+```mermaid
+flowchart TB
+    subgraph Host["Host Machine"]
+        subgraph Network["pg-net (Docker Network)"]
+            subgraph PG["pgdatabase"]
+                PGDB[(PostgreSQL<br/>ny_taxi DB)]
+            end
+
+            subgraph Admin["pgadmin"]
+                PGUI[pgAdmin 4<br/>Web UI]
+            end
+
+            subgraph Ingest["taxi_ingest"]
+                Script[ingest_data.py]
+            end
+        end
+
+        Vol1[(ny_taxi_postgres_data)]
+        Vol2[(pgadmin_data)]
+    end
+
+    subgraph External["External"]
+        GitHub[("GitHub Releases<br/>NYC Taxi Data")]
+        Browser["Browser"]
+    end
+
+    %% Connections
+    PGUI -->|"Connect via<br/>hostname: pgdatabase<br/>port: 5432"| PGDB
+    Script -->|"Insert data via<br/>SQLAlchemy"| PGDB
+    Script -->|"Download CSV"| GitHub
+
+    %% Volume mounts
+    PGDB -.->|"persist"| Vol1
+    PGUI -.->|"persist"| Vol2
+
+    %% Host port mappings
+    Browser -->|"localhost:8085"| PGUI
+    Browser -->|"localhost:5432<br/>(pgcli)"| PGDB
+
+    %% Styling
+    style Network fill:#1976d2,stroke:#1565c0,color:#fff
+    style PG fill:#388e3c,stroke:#2e7d32,color:#fff
+    style Admin fill:#f57c00,stroke:#ef6c00,color:#fff
+    style Ingest fill:#8e24aa,stroke:#7b1fa2,color:#fff
+    style Host fill:#455a64,stroke:#37474f,color:#fff
+    style External fill:#607d8b,stroke:#546e7a,color:#fff
+    style GitHub fill:#37474f,stroke:#263238,color:#fff
+    style PGDB fill:#37474f,stroke:#263238,color:#fff
+    style Vol1 fill:#37474f,stroke:#263238,color:#fff
+    style Vol2 fill:#37474f,stroke:#263238,color:#fff
+```
+
+**Key Points:**
+- All containers communicate over the `pg-net` Docker network
+- Containers reference each other by service name (e.g., `pgdatabase`)
+- `taxi_ingest` is a one-shot container (runs and exits after ingestion)
+- Data persists in Docker volumes even when containers are recreated
