@@ -34,10 +34,21 @@ parse_dates = [
 
 def ingest_data(
     url: str,
+    url_zones: str,
     engine,
     target_table: str,
-    chunksize: int = 100_000
+    chunksize: int = 100_000,
 ) -> pd.DataFrame:
+
+
+    # Zones Lookup-Table
+    df_zones = pd.read_csv(url_zones)
+    df_zones.to_sql(
+        name="zones", 
+        con=engine, 
+        if_exists="replace"
+    )
+    print(f"Table 'zones' created")
 
     df_iter = pd.read_csv(
         url,
@@ -57,7 +68,7 @@ def ingest_data(
         if_exists="replace"
     )
     
-    print(f"Table {target_table} created")
+    print(f"Table '{target_table}' created")
     
     first_chunk.to_sql(
         name=target_table,
@@ -90,15 +101,21 @@ def ingest_data(
 @click.option("--target-table", required=True, help="Target table name in database")
 def run(pg_user, pg_pass, pg_host, pg_port, pg_db, year, month, chunksize, target_table):
     engine = create_engine(f"postgresql://{pg_user}:{pg_pass}@{pg_host}:{pg_port}/{pg_db}")
+    
     url_prefix = "https://github.com/DataTalksClub/nyc-tlc-data/releases/download/yellow"
     filename = f"yellow_tripdata_{year:04d}-{month:02d}.csv.gz"
     url = f"{url_prefix}/{filename}"
+    
+    zones_filename = "taxi+_zone_lookup.csv"
+    url_zones = f"https://d37ci6vzurychx.cloudfront.net/misc/{zones_filename}"
+    
 
     ingest_data(
         url if not os.path.exists(filename) else filename,
+        url_zones if not os.path.exists(zones_filename) else zones_filename,
         engine=engine,
         target_table=target_table,
-        chunksize=chunksize
+        chunksize=chunksize,
     )
 
 
