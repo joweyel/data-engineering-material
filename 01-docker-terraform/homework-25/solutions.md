@@ -33,7 +33,7 @@ What's the version of `pip` in the image?
 
 Run docker container (pull if not yet there)
 ```bash
-docker run -it python:3.12.8 bash
+docker run -it --rm python:3.12.8 bash
 ```
 Result
 ```bash
