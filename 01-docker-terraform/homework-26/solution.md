@@ -166,9 +166,9 @@ ORDER BY
 
 
 **Result**: 
-| Trip Distance | Day        |
-| ------------- | ---------- |
-| 88.03         | 2025-11-14 |
+| **Trip Distance** | **Day**    |
+| ----------------- | ---------- |
+| 88.03             | 2025-11-14 |
 
 
 ## Question 5. Biggest pickup zone
@@ -223,6 +223,51 @@ Note: it's `tip` , not `trip`. We need the name of the zone, not the ID.
 ### Answer 6
 
 ```sql
--- TODO
+SELECT
+	  zdo."Zone" AS dropoff_zone,
+	  MAX(t.tip_amount) AS max_tip
+FROM
+	  green_taxi_data AS t
+	  JOIN zones AS zpu
+	  	  ON t."PULocationID" = zpu."LocationID"
+	  JOIN zones AS zdo
+	  	  ON t."DOLocationID" = zdo."LocationID"
+WHERE	
+	  t.lpep_pickup_datetime >= '2025-11-01' AND 
+	  t.lpep_pickup_datetime < '2025-12-01' AND
+	  zpu."Zone" = 'East Harlem North'
+GROUP BY
+	  dropoff_zone
+ORDER BY
+	  max_tip DESC
+LIMIT
+    1;
 ```
 
+Result:
+| **dropoff_zone** | **max_tip** |
+| ---------------- | ----------- |
+| Yorkville West   | 81.89       |
+
+
+## Question 7. Terraform Workflow
+
+Which of the following sequences, respectively, describes the workflow for:
+1. Downloading the provider plugins and setting up backend,
+2. Generating proposed changes and auto-executing the plan
+3. Remove all resources managed by terraform`
+
+Answers:
+- terraform import, terraform apply -y, terraform destroy
+- teraform init, terraform plan -auto-apply, terraform rm
+- terraform init, terraform run -auto-approve, terraform destroy
+- terraform init, terraform apply -auto-approve, terraform destroy
+- terraform import, terraform apply -y, terraform rm
+
+### Answer 7
+
+```bash
+terraform init
+terraform apply -auto-approve
+terraform destroy
+```
