@@ -1,316 +1,734 @@
-# Module 2: Workflow Orchestration
+# Workflow Orchestration
 
-## 2.2.1 Workflow Orchestration Introduction
+> Notes taken directly from the course repo: https://github.com/DataTalksClub/data-engineering-zoomcamp/tree/main/02-workflow-orchestration
 
-### What is Workflow Orchestration?
-- Is a process where multiple components are arranged (like in an orchestra) to work in the correct way / order
-- Workflow orchestration tools are for example: Ariflow, Mage, Prefect, Kestra, ...
+Welcome to Module 2 of the Data Engineering Zoomcamp! This week, we’ll dive into workflow orchestration using [Kestra](https://go.kestra.io/de-zoomcamp/github). 
 
-### What is Kestra?
+Kestra is an open-source, event-driven orchestration platform that simplifies building both scheduled and event-driven workflows. By adopting Infrastructure as Code practices for data and process orchestration, Kestra enables you to build reliable workflows with just a few lines of YAML.
 
-- An All-In One Automation and Orchestration Platform
+> [!NOTE]  
+>You can find all videos for this week in this [YouTube Playlist](https://go.kestra.io/de-zoomcamp/yt-playlist).
 
-![alt text](images/kestra_1.jpg)
+---
 
-- Has options of...
-  - No-Code: 
-  - Low-Code
-  - Full-Code
-  - Using AI Copilot for a functionality to add it for you
-- Supports any language
-  - Examples: Python, Julia, Ruby, R, JavaScript, C, ...
-  - Is basically language agnoistic
-- Allows monitoring of Workflows and Executions
-- Allows scheduled workflows
-- Has Plugins for many tools and basically all cloud platforms
+## Course Structure
 
-### Overview of Content
-- Introduction to Kestra
-- ETL: Extract data and load it to postgres
-- ETL: Extract data and load it to Google Cloud
-- Parameterizing Execution
-- Scheduling and Backfills
-- Install Kestra on the Cloud and sync your Flows with Git
+- [2.1 - Introduction to Workflow Orchestration](#21-introduction-to-workflow-orchestration)
+- [2.2 - Getting Started With Kestra](#22-getting-started-with-kestra)
+- [2.3 - Hands-On Coding Project: Build ETL Data Pipelines with Kestra](#23-hands-on-coding-project-build-data-pipelines-with-kestra)
+- [2.4 - ELT Pipelines in Kestra: Google Cloud Platform](#24-elt-pipelines-in-kestra-google-cloud-platform)
+- [2.4-AWS - ELT Pipelines in Kestra: Amazon Web Services (Alternative)](#24-aws-elt-pipelines-in-kestra-amazon-web-services-alternative)
+- [2.5 - Using AI for Data Engineering in Kestra](#25-using-ai-for-data-engineering-in-kestra)
+- [2.6 - Bonus](#26-bonus-deploy-to-the-cloud-optional)
 
 
-## 2.2.2 Learn Kestra
+## 2.1 Introduction to Workflow Orchestration
 
-To learn what Kestra is and how to use it, you should read the Kestra Blog and the accompanying videos on youtube.
+In this section, you’ll learn the foundations of workflow orchestration, its importance, and how Kestra fits into the orchestration landscape.
 
-### Getting Started with Kestra 
-- [Website](https://kestra.io/blogs/2024-04-05-getting-started-with-kestra)
-- [Video](https://youtu.be/a2BZ7vOihjg)
-
-#### Properties
-- Workflows are declared in yaml
-- Each flow requires 3 properties
-  - `id`: Name of the flow
-  - `namespace`: Environment for your flow
-  - `tasks`: List of tasks to execute in your flow
-
-Example flow:
-```yaml
-id: getting_started
-namespace: example
-tasks:
-  - id: hello_world
-    type: io.kestra.core.tasks.log.Log
-    message: Hello World!
-```
-
-#### Example Application
-- Applications sends API request to github to ask number of stars that the Kestra Repo has
-- Sends the results from github every hour to discord
-
-The resulting flow and code look as follows:
-
-<details>
-<summary><b>flow</b></summary>
-
-```yaml
-id: hello-world
-namespace: company.team
-
-inputs:
-  - id: kestra_logo
-    type: STRING
-    defaults: https://avatars.githubusercontent.com/u/59033362?s=48&v=4
+### 2.1.1 - What is Workflow Orchestration?
   
-  - id: discord_webhook
-    type: STRING
-    defaults: https://discord.com/api/webhooks/...  # replace with your own wbhook
+Think of a music orchestra. There's a variety of different instruments. Some more than others, all with different roles when it comes to playing music. To make sure they all come together at the right time, they follow a conductor who helps the orchestra to play together. 
 
-tasks:
-  - id: python_script
-    type: io.kestra.plugin.scripts.python.Commands
-    namespaceFiles:
-      enabled: true
-    beforeCommands:
-      - python -m venv .venv
-      - . .venv/bin/activate
-      - pip install -r scripts/requirements.txt
-    commands:
-      - python scripts/api_example.py
+Now replace the instruments with tools and the conductor with an orchestrator. We often have multiple tools and platforms that we need to work together. Sometimes on a routine schedule, other times based on events that happen. That's where the orchestrator comes in to help all of these tools work together.
 
-  - id: output_gh_stars
-    type: io.kestra.plugin.core.log.Log
-    message: "Number of stars: {{ outputs.python_script.vars.gh_stars }}"
-  
-  - id: send_notification
-    type: io.kestra.plugin.notifications.discord.DiscordExecution
-    content: "Total of Github Stars: {{ outputs.python_script.vars.gh_stars }}"
-    username: Kestra
-    avatarUrl: "{{ inputs.kestra_logo }}"
-    url: "{{ inputs.discord_webhook }}"
+A workflow orchestrator might do the following tasks:
+- Run workflows which contain a number of predefined steps
+- Monitor and log errors, as well as taking a number of extra steps when they occur
+- Automatically run workflows based on schedules and events
+
+In data engineering, you often need to move data from one place, to another, sometimes with some modifications made to the data in the middle. This is where a workflow orchestrator can help out by managing these steps, while giving us visibility into it at the same time. 
+
+In this module, we're going to build our own data pipeline using ETL (Extract, Transform Load) with Kestra at the core of the operation, but first we need to understand a bit more about how Kestra works before we can get building! 
+
+#### Videos
+- **2.1.1 - What is Workflow Orchestration?**  
+  [![2.1.1 - What is Workflow Orchestration?](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2F-JLnp-iLins)](https://youtu.be/-JLnp-iLins)
 
 
-triggers:
-  - id: hour_trigger
-    type: io.kestra.plugin.core.trigger.Schedule
-    cron: 0 * * * *
-    disabled: false
-```
+### 2.1.2 - What is Kestra?
 
-</details>
+Kestra is an open-source, infinitely-scalable orchestration platform that enables all engineers to manage business-critical workflows. 
 
-<details>
-<summary><b>scripts/api_example.py</b></summary>
+Kestra is a great choice for workflow orchestration:
+- Build with Flow code (YAML), No-code or with the AI Copilot - flexibility in how you build your workflows
+- 1000+ Plugins - integrate with all the tools you use
+- Support for any programming language - pick the right tool for the job
+- Schedule or Event Based Triggers - have your workflows respond to data
 
-```python
-import requests
-from kestra import Kestra
+#### Videos
 
-r = requests.get("https://api.github.com/repos/kestra-io/kestra")
-gh_stars = r.json()["stargazers_count"]
-Kestra.outputs({"gh_stars": gh_stars})
-```
-</details>
+- **2.1.2 - What is Kestra?**  
+  [![2.1.2 - What is Kestra?](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FZvVN_NmB_1s)](https://youtu.be/ZvVN_NmB_1s)
 
-<details>
-<summary><b>scripts/requirements.txt</b></summary>
+### Resources
+- [Quickstart Guide](https://go.kestra.io/de-zoomcamp/quickstart)
+- [What is an Orchestrator?](https://go.kestra.io/de-zoomcamp/what-is-an-orchestrator)
 
-```txt
-requests
-kestra
-```
-</details>
+---
 
+## 2.2 Getting Started with Kestra
 
-### Kestra Beginner Tutorial
-- [Website](https://kestra.io/docs/tutorial)
-- [Playlist](https://www.youtube.com/playlist?list=PLEK3H8YwZn1oaSNybGnIfO03KC_jQVChL)
+In this section, you'll learn how to install Kestra, as well as the key concepts required to build your first workflow. Once our first workflow is built, we can extend this further by executing a Python script inside of a workflow. 
 
+You will:
+1. Install Kestra using Docker Compose
+2. Learn the concepts of Kestra to build your first workflow
+3. Execute a Python script inside of a Kestra Flow
 
-The very short videos in the playlist give a foundational knowledge of how kestra works. The notation in the videos is in some parts deprecated, so looking into the accompanying documentation is required to get an up-to-date understanding of kestra.
+### 2.2.1 - Installing Kestra
 
-### Use Kestra with Docker Compose
+To install Kestra, we are going to use Docker Compose. We already have a Postgres database set up, along with pgAdmin from Module 1. We can continue to use these with Kestra but we'll need to make a few modifications to our Docker Compose file.
 
-- [Documentation](https://kestra.io/docs/installation/docker-compose)
+Use [this example Docker Compose file](docker-compose.yml) to correctly add the 2 new services and set up the volumes correctly.
 
-A list of available Kestra Docker containers can be found in the documentation [here](https://kestra.io/docs/installation/docker#docker-image-tags). There is a major distinction between all the different Docker containers:
-- **All Plugins**: 
-  - `kestra/kestra:*`
-- **No Plugins**: 
-  - `kestra/kestra:*-no-plugins`
+Add information about setting a username and password.
 
+We'll set up Kestra using Docker Compose containing one container for the Kestra server and another for the Postgres database:
 
-The [docker-compose.yaml](./docker-compose.yml) launches 4 docker container:
-- `kestra`: a Kestra-Server
-- `postgres`: a Postgres-Database to have persistent Kestra data
-- `postgres_zoomcamp`: a Postgres-Database to store processed data in
-- `pgadmin`: a pgAdmin instance to look into the data
-
-
-
-## 2.2.3 ETL Pipelines with Postgres in Kestra
-
-On this section the used data (NYC Taxi data) will be obtained from here: https://github.com/DataTalksClub/nyc-tlc-data/releases.
-
-The overall goal is to: 
-- **`Extract`**: Load the data from the git repository
-- **`Transform`**: Process it with Kestra by merging the data
-- **`Load`**: Save it to a database
-
-Here the data has to be added for each month and combined into a table.
-
-Start Kestra with this [docker-compose](docker-compose.yml):
 ```bash
-docker-compose up
+cd 02-workflow-orchestration
+docker compose up -d
 ```
 
-The Kastra-Flow that is used for the ETL Pipeline is [`postgres_taxi.yaml`](flows/postgres_taxi.yaml). The components are commented and are pretty self-expalnatory.
+**Note:** Check that `pgAdmin` isn't running on the same ports as Kestra. If so, check out the [FAQ](#troubleshooting-tips) at the bottom of the README.
 
-Accessing the ingested data with pgAdmin:
-- Open pgAdmin at http://localhost:8085
-- Log in with the credentials [here](docker-compose.yml#L86)
-- Register a Server with the following connection configuration:
-  - **Host name**:  postgres_zoomcamp
-  - **Port**: 5432
-  - **Maintenance database**: postgres-zoomcamp
-  - **Username**: kestra
+Once the container starts, you can access the Kestra UI at [http://localhost:8080](http://localhost:8080).
+
+To shut down Kestra, go to the same directory and run the following command:
+
+```bash
+docker compose down
+```
+#### Add Flows to Kestra
+
+Flows can be added to Kestra by copying and pasting the YAML directly into the editor, or by adding via Kestra's API. See below for adding programmatically.
+
+<details>
+<summary>Add Flows to Kestra programmatically</summary>
+
+If you prefer to add flows programmatically using Kestra's API, run the following commands:
+
+```bash
+# Import all flows: assuming username admin@kestra.io and password Admin1234 (adjust to match your username and password)
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/01_hello_world.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/02_python.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/03_getting_started_data_pipeline.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/04_postgres_taxi.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/05_postgres_taxi_scheduled.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/06_gcp_kv.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/07_gcp_setup.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/08_gcp_taxi.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/09_gcp_taxi_scheduled.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/10_chat_without_rag.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/11_chat_with_rag.yaml
+```
+</details>
+
+#### Videos
+
+- **2.2.1 - Installing Kestra**  
+  [![2.2.1 - Installing Kestra](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FwgPxC4UjoLM)](https://youtu.be/wgPxC4UjoLM)
+
+#### Resources
+- [Install Kestra with Docker Compose](https://go.kestra.io/de-zoomcamp/docker-compose)
 
 
+### 2.2.2 - Kestra Concepts
 
-## 2.2.4 - Manage Scheduling and Backfills with Postgres in Kestra
+To start building workflows in Kestra, we need to understand a number of concepts.
+- [Flow](https://go.kestra.io/de-zoomcamp/flow) - a container for tasks and their orchestration logic. 
+- [Tasks](https://go.kestra.io/de-zoomcamp/tasks) - the steps within a flow.
+- [Inputs](https://go.kestra.io/de-zoomcamp/inputs) - dynamic values passed to the flow at runtime.
+- [Outputs](https://go.kestra.io/de-zoomcamp/outputs) - pass data between tasks and flows.
+- [Triggers](https://go.kestra.io/de-zoomcamp/triggers) - mechanism that automatically starts the execution of a flow.
+- [Execution](https://go.kestra.io/de-zoomcamp/execution) - a single run of a flow with a specific state.
+- [Variables](https://go.kestra.io/de-zoomcamp/variables) - key–value pairs that let you reuse values across tasks.
+- [Plugin Defaults](https://go.kestra.io/de-zoomcamp/plugin-defaults) - default values applied to every task of a given type within one or more flows.
+- [Concurrency](https://go.kestra.io/de-zoomcamp/concurrency) - control how many executions of a flow can run at the same time.
 
-In this section we learn how the application of the flow can be automated using scheduling and how backfills can be used for missed schedules in the past.
+While there are more concepts used for building powerful workflows, these are the ones we're going to use to build our data pipelines.
 
-The flow used in this section is [`postgres_taxi_scheduled`](flows/postgres_taxi_scheduled.yaml)
+The flow [`01_hello_world.yaml`](flows/01_hello_world.yaml) showcases all of these concepts inside of one workflow:
+- The flow has 5 tasks: 2 log tasks and a sleep task
+- The flow takes an input called `name`.
+- There is a variable that takes the `name` input to generate a full welcome message.
+- An output is generated from the return task and is logged in a later log task.
+- There is a trigger to execute this flow every day at 10am.
+- Plugin Defaults are used to make both log tasks send their messages as `ERROR` level.
+- We have a concurrency limit of 2 executions. Any further ones made while 2 are running will fail.
 
-### Scheduling example
-The following example shows how cron-jobs are used to schedule Kestra runs
+#### Videos
+- **2.2.2 - Kestra Concepts**  
+  [![2.2.2 - Kestra Concepts](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FMNOKVx8780E)](https://youtu.be/MNOKVx8780E)
+
+#### Resources
+- [Tutorial](https://go.kestra.io/de-zoomcamp/tutorial)
+- [Workflow Components Documentation](https://go.kestra.io/de-zoomcamp/workflow-components)
+
+### 2.2.3 - Orchestrate Python Code
+
+Now that we've built our first workflow, we can take it a step further by adding Python code into our flow. In Kestra, we can run Python code from a dedicated file or write it directly inside of our workflow.
+
+While Kestra has a huge variety of plugins available for building your workflows, you also have the option to write your own code and have Kestra execute that based on schedules or events. This means you can pick the right tools for your pipelines, rather than the ones you're limited to. 
+
+In our example Python workflow, [`02_python.yaml`](flows/02_python.yaml), our code fetches the number of Docker image pulls from DockerHub and returns it as an output to Kestra. This is useful as we can access this output with other tasks, even though it was generated inside of our Python script.
+
+#### Videos
+- **2.2.3 - Orchestrate Python Code**  
+  [![2.2.3 - Orchestrate Python Code](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FVAHm0R_XjqI)](https://youtu.be/VAHm0R_XjqI)
+
+#### Resources
+- [How-to Guide: Python](https://go.kestra.io/de-zoomcamp/python)
+
+
+## 2.3 Hands-On Coding Project: Build Data Pipelines with Kestra
+
+Next, we're gonna build ETL pipelines for Yellow and Green Taxi data from NYC’s Taxi and Limousine Commission (TLC). You will:
+1. Extract data from [CSV files](https://github.com/DataTalksClub/nyc-tlc-data/releases).
+2. Load it into Postgres or Google Cloud (GCS + BigQuery).
+3. Explore scheduling and backfilling workflows.
+
+### 2.3.1 Getting Started Pipeline
+
+This introductory flow is added just to demonstrate a simple data pipeline which extracts data via HTTP REST API, transforms that data in Python and then queries it using DuckDB. For this stage, a new separate Postgres database is created for the exercises. 
+
+
+```mermaid
+graph LR
+  Extract[Extract Data via HTTP REST API] --> Transform[Transform Data in Python]
+  Transform --> Query[Query Data with DuckDB]
+```
+
+Add the flow [`03_getting_started_data_pipeline.yaml`](flows/03_getting_started_data_pipeline.yaml) from the UI if you haven't already and execute it to see the results. Inspect the Gantt and Logs tabs to understand the flow execution.
+
+#### Videos
+
+- **2.3.1 - Getting Started Pipeline**   
+  [![Create an ETL Pipeline with Postgres in Kestra](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2F-KmwrCqRhic)](https://youtu.be/-KmwrCqRhic)
+
+
+### 2.3.2 Local DB: Load Taxi Data to Postgres
+
+Before we start loading data to GCP, we'll first play with the Yellow and Green Taxi data using a local Postgres database running in a Docker container. We will use the same database from Module 1 which should be in the same Docker Compose file as Kestra.
+
+The flow will extract CSV data partitioned by year and month, create tables, load data to the monthly table, and finally merge the data to the final destination table.
+
+```mermaid
+graph LR
+  Start[Select Year & Month] --> SetLabel[Set Labels]
+  SetLabel --> Extract[Extract CSV Data]
+  Extract -->|Taxi=Yellow| YellowFinalTable[Create Yellow Final Table]:::yellow
+  Extract -->|Taxi=Green| GreenFinalTable[Create Green Final Table]:::green
+  YellowFinalTable --> YellowMonthlyTable[Create Yellow Monthly Table]:::yellow
+  GreenFinalTable --> GreenMonthlyTable[Create Green Monthly Table]:::green
+  YellowMonthlyTable --> YellowCopyIn[Load Data to Monthly Table]:::yellow
+  GreenMonthlyTable --> GreenCopyIn[Load Data to Monthly Table]:::green
+  YellowCopyIn --> YellowMerge[Merge Yellow Data]:::yellow
+  GreenCopyIn --> GreenMerge[Merge Green Data]:::green
+
+  classDef yellow fill:#FFD700,stroke:#000,stroke-width:1px;
+  classDef green fill:#32CD32,stroke:#000,stroke-width:1px;
+```
+
+The flow code: [`04_postgres_taxi.yaml`](flows/04_postgres_taxi.yaml).
+
+
+> [!NOTE]  
+> The NYC Taxi and Limousine Commission (TLC) Trip Record Data provided on the [nyc.gov](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page) website is currently available only in a Parquet format, but this is NOT the dataset we're going to use in this course. For the purpose of this course, we'll use the **CSV files** available [here on GitHub](https://github.com/DataTalksClub/nyc-tlc-data/releases). This is because the Parquet format can be challenging to understand by newcomers, and we want to make the course as accessible as possible — the CSV format can be easily introspected using tools like Excel or Google Sheets, or even a simple text editor.
+
+#### Videos
+
+- **2.3.2 - Local DB: Load Taxi Data to Postgres**   
+  [![Local DB: Load Taxi Data to Postgres](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FZ9ZmmwtXDcU)](https://youtu.be/Z9ZmmwtXDcU)
+
+#### Resources
+- [Docker Compose with Kestra, Postgres and pgAdmin](docker-compose.yml)
+
+### 2.3.3 Local DB: Learn Scheduling and Backfills
+
+We can now schedule the same pipeline shown above to run daily at 9 AM UTC. We'll also demonstrate how to backfill the data pipeline to run on historical data.
+
+Note: given the large dataset, we'll backfill only data for the green taxi dataset for the year 2019.
+
+The flow code: [`05_postgres_taxi_scheduled.yaml`](flows/05_postgres_taxi_scheduled.yaml).
+
+#### Videos
+
+- **2.3.3 - Scheduling and Backfills**  
+  [![Scheduling and Backfills](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2F1pu_C_oOAMA)](https://youtu.be/1pu_C_oOAMA)
+---
+
+## 2.4 ELT Pipelines in Kestra: Google Cloud Platform
+
+Now that you've learned how to build ETL pipelines locally using Postgres, we are ready to move to the cloud. In this section, we'll load the same Yellow and Green Taxi data to Google Cloud Platform (GCP) using: 
+1. Google Cloud Storage (GCS) as a data lake  
+2. BigQuery as a data warehouse.
+
+### 2.4.1 - ETL vs ELT
+
+In 2.3, we made a ETL pipeline inside of Kestra:
+- **Extract:** Firstly, we extract the dataset from GitHub
+- **Transform:** Next, we transform it with Python
+- **Load:** Finally, we load it into our Postgres database
+
+While this is very standard across the industry, sometimes it makes sense to change the order when working with the cloud. If you're working with a large dataset, like the Yellow Taxi data, there can be benefits to extracting and loading straight into a data warehouse, and then performing transformations directly in the data warehouse. When working with BigQuery, we will use ELT:
+- **Extract:** Firstly, we extract the dataset from GitHub
+- **Load:** Next, we load this dataset (in this case, a csv file) into a data lake (Google Cloud Storage)
+- **Transform:** Finally, we can create a table inside of our data warehouse (BigQuery) which uses the data from our data lake to perform our transformations.
+
+The reason for loading into the data warehouse before transforming means we can utilize the cloud's performance benefits for transforming large datasets. What might take a lot longer for a local machine, can take a fraction of the time in the cloud.
+
+Over the next few videos, we'll look at setting up BigQuery and transforming the Yellow Taxi dataset.
+
+#### Videos
+
+- **2.4.1 - ETL vs ELT**  
+  [![ETL vs ELT](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FE04yurp1tSU)](https://youtu.be/E04yurp1tSU)
+
+### 2.4.2 Setup Google Cloud Platform (GCP)
+
+Before we start loading data to GCP, we need to set up the Google Cloud Platform. 
+
+First, adjust the following flow [`06_gcp_kv.yaml`](flows/06_gcp_kv.yaml) to include your service account, GCP project ID, BigQuery dataset and GCS bucket name (_along with their location_) as KV Store values:
+- GCP_CREDS
+- GCP_PROJECT_ID
+- GCP_LOCATION
+- GCP_BUCKET_NAME
+- GCP_DATASET.
+
+
+> [!WARNING]  
+> The `GCP_CREDS` service account contains sensitive information. Ensure you keep it secure and do not commit it to Git. Keep it as secure as your passwords.
+
+#### Create GCP Resources
+
+If you haven't already created the GCS bucket and BigQuery dataset in the first week of the course, you can use this flow to create them: [`07_gcp_setup.yaml`](flows/07_gcp_setup.yaml).
+
+#### Videos
+
+- **2.4.2 - Create an ETL Pipeline with GCS and BigQuery in Kestra**  
+  Coming soon
+
+### 2.4.3 GCP Workflow: Load Taxi Data to BigQuery
+
+Now that Google Cloud is set up with a storage bucket, we can start the ELT process.
+
+```mermaid
+graph LR
+  SetLabel[Set Labels] --> Extract[Extract CSV Data]
+  Extract --> UploadToGCS[Upload Data to GCS]
+  UploadToGCS -->|Taxi=Yellow| BQYellowTripdata[Main Yellow Tripdata Table]:::yellow
+  UploadToGCS -->|Taxi=Green| BQGreenTripdata[Main Green Tripdata Table]:::green
+  BQYellowTripdata --> BQYellowTableExt[External Table]:::yellow
+  BQGreenTripdata --> BQGreenTableExt[External Table]:::green
+  BQYellowTableExt --> BQYellowTableTmp[Monthly Table]:::yellow
+  BQGreenTableExt --> BQGreenTableTmp[Monthly Table]:::green
+  BQYellowTableTmp --> BQYellowMerge[Merge to Main Table]:::yellow
+  BQGreenTableTmp --> BQGreenMerge[Merge to Main Table]:::green
+  BQYellowMerge --> PurgeFiles[Purge Files]
+  BQGreenMerge --> PurgeFiles[Purge Files]
+
+  classDef yellow fill:#FFD700,stroke:#000,stroke-width:1px;
+  classDef green fill:#32CD32,stroke:#000,stroke-width:1px;
+```
+
+The flow code: [`08_gcp_taxi.yaml`](flows/08_gcp_taxi.yaml).
+
+#### Videos
+
+- **2.4.3 - Create an ETL Pipeline with GCS and BigQuery in Kestra**  
+  [![Create an ETL Pipeline with GCS and BigQuery in Kestra](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2F52u9X_bfTAo)](https://youtu.be/52u9X_bfTAo)
+
+### 2.4.4 GCP Workflow: Schedule and Backfill Full Dataset
+
+We can now schedule the same pipeline shown above to run daily at 9 AM UTC for the green dataset and at 10 AM UTC for the yellow dataset. You can backfill historical data directly from the Kestra UI.
+
+Since we now process data in a cloud environment with infinitely scalable storage and compute, we can backfill the entire dataset for both the yellow and green taxi data without the risk of running out of resources on our local machine.
+
+The flow code: [`09_gcp_taxi_scheduled.yaml`](flows/09_gcp_taxi_scheduled.yaml).
+
+#### Videos
+
+- **2.4.4 - GCP Workflow: Schedule and Backfills**
+  [![GCP Workflow: Schedule and Backfills](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2Fb-6KhfWfk2M)](https://youtu.be/b-6KhfWfk2M)
+
+---
+
+## 2.4-AWS ELT Pipelines in Kestra: Amazon Web Services (Alternative)
+
+If you prefer to use AWS instead of GCP, we have alternative Kestra flows that use:
+1. Amazon S3 as a data lake (instead of Google Cloud Storage)
+2. Amazon Athena + AWS Glue as a serverless data warehouse (instead of BigQuery)
+
+### AWS vs GCP Service Mapping
+
+| GCP Service | AWS Equivalent | Purpose |
+|-------------|----------------|---------|
+| Google Cloud Storage (GCS) | Amazon S3 | Data Lake |
+| BigQuery | Amazon Athena + Glue | Serverless SQL queries |
+| Service Account | IAM User/Role | Authentication |
+| GCP Project | AWS Account | Resource container |
+
+### 2.4-AWS.1 Setup AWS
+
+Before you start, you need:
+1. An AWS account (Free Tier available)
+2. IAM user with programmatic access
+3. Permissions: `AmazonS3FullAccess`, `AmazonAthenaFullAccess`, `AWSGlueConsoleFullAccess`
+
+**Step 1: Configure AWS Credentials in Kestra**
+
+First, set your AWS credentials as Kestra Secrets (recommended for security):
+- `AWS_ACCESS_KEY_ID` - Your IAM user's access key
+- `AWS_SECRET_ACCESS_KEY` - Your IAM user's secret key
+
+You can add these via the Kestra UI under Administration > Secrets.
+
+**Step 2: Set AWS Configuration**
+
+Run the flow [`06_aws_kv.yaml`](flows/06_aws_kv.yaml) to store your AWS configuration in Kestra's KV Store:
+- `AWS_REGION` - Your preferred AWS region (e.g., `us-east-1`)
+- `AWS_BUCKET_NAME` - A globally unique S3 bucket name
+- `AWS_GLUE_DATABASE` - Name for your Glue database (e.g., `zoomcamp`)
+
+### 2.4-AWS.2 Create AWS Resources
+
+Run the flow [`07_aws_setup.yaml`](flows/07_aws_setup.yaml) to create:
+- S3 bucket for your data lake
+- Glue database for Athena queries
+
+### 2.4-AWS.3 AWS Workflow: Load Taxi Data to Athena
+
+Similar to the GCP workflow, the AWS pipeline:
+
+```mermaid
+graph LR
+  SetLabel[Set Labels] --> Extract[Extract CSV Data]
+  Extract --> UploadToS3[Upload Data to S3]
+  UploadToS3 -->|Taxi=Yellow| AthenaYellowExt[External Table]:::yellow
+  UploadToS3 -->|Taxi=Green| AthenaGreenExt[External Table]:::green
+  AthenaYellowExt --> AthenaYellowMain[Main Table]:::yellow
+  AthenaGreenExt --> AthenaGreenMain[Main Table]:::green
+  AthenaYellowMain --> AthenaYellowInsert[Insert Data]:::yellow
+  AthenaGreenMain --> AthenaGreenInsert[Insert Data]:::green
+  AthenaYellowInsert --> PurgeFiles[Purge Files]
+  AthenaGreenInsert --> PurgeFiles[Purge Files]
+
+  classDef yellow fill:#FFD700,stroke:#000,stroke-width:1px;
+  classDef green fill:#32CD32,stroke:#000,stroke-width:1px;
+```
+
+The flow code: [`08_aws_taxi.yaml`](flows/08_aws_taxi.yaml).
+
+### 2.4-AWS.4 AWS Workflow: Schedule and Backfill
+
+Schedule the AWS pipeline to run monthly with backfill support.
+
+The flow code: [`09_aws_taxi_scheduled.yaml`](flows/09_aws_taxi_scheduled.yaml).
+
+### AWS Flow Files Summary
+
+| Flow | Purpose |
+|------|---------|
+| [`06_aws_kv.yaml`](flows/06_aws_kv.yaml) | Store AWS configuration in KV Store |
+| [`07_aws_setup.yaml`](flows/07_aws_setup.yaml) | Create S3 bucket and Glue database |
+| [`08_aws_taxi.yaml`](flows/08_aws_taxi.yaml) | ELT pipeline: S3 + Athena |
+| [`09_aws_taxi_scheduled.yaml`](flows/09_aws_taxi_scheduled.yaml) | Scheduled ELT with backfill support |
+
+### Adding AWS Flows via API
+
+```bash
+# Import AWS flows (adjust username/password as needed)
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/06_aws_kv.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/07_aws_setup.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/08_aws_taxi.yaml
+curl -X POST -u 'admin@kestra.io:Admin1234' http://localhost:8080/api/v1/flows/import -F fileUpload=@flows/09_aws_taxi_scheduled.yaml
+```
+
+---
+
+## 2.5 Using AI for Data Engineering in Kestra
+
+This section builds on what you learned earlier in Module 2 to show you how AI can speed up workflow development.
+
+By the end of this section, you will:
+- Understand why context engineering matters when collaborating with LLMs
+- Use AI Copilot to build Kestra flows faster
+- Use Retrieval Augmented Generation (RAG) in data pipelines
+
+### Prerequisites
+
+- Completion of earlier sections in Module 2 (Workflow Orchestration with Kestra)
+- Kestra running locally
+- Google Cloud account with access to Gemini API (there's a generous free tier!)
+
+---
+
+### 2.5.1 Introduction: Why AI for Workflows?
+
+As data engineers, we spend significant time writing boilerplate code, searching documentation, and structuring data pipelines. AI tools can help us:
+
+- **Generate workflows faster**: Describe what you want to accomplish in natural language instead of writing YAML from scratch
+- **Avoid errors**: Get syntax-correct, up-to-date workflow code that follows best practices
+
+However, AI is only as good as the context we provide. This section teaches you how to engineer that context for reliable, production-ready data workflows.
+
+#### Videos
+
+- **2.5.1 - Using AI for Data Engineering**  
+  [![Using AI for Data Engineering](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FGHPtRDAv044)](https://youtu.be/GHPtRDAv044)
+
+---
+
+### 2.5.2 Context Engineering with ChatGPT
+
+Let's start by seeing what happens when AI lacks proper context.
+
+#### Experiment: ChatGPT Without Context
+
+1. **Open ChatGPT in a private browser window** (to avoid any existing chat context): https://chatgpt.com
+
+2. **Enter this prompt:**
+   ```
+   Create a Kestra flow that loads NYC taxi data from a CSV file to BigQuery. The flow should extract data, upload to GCS, and load to BigQuery.
+   ```
+
+3. **Observe the results:**
+   - ChatGPT will generate a Kestra flow, but it likely contains:
+     - **Outdated plugin syntax** e.g., old task types that have been renamed
+     - **Incorrect property names** e.g., properties that don't exist in current versions
+     - **Hallucinated features** e.g., tasks, triggers or properties that never existed
+
+#### Why Does This Happen?
+
+Large Language Models (LLMs) like GPT models from OpenAI are trained on data up to a specific point in time (knowledge cutoff). They don't automatically know about:
+- Software updates and new releases
+- Renamed plugins or changed APIs
+
+This is the fundamental challenge of using AI: **the model can only work with information it has access to.**
+
+#### Key Learning: Context is Everything
+
+Without proper context:
+- ❌ Generic AI assistants hallucinate outdated or incorrect code
+- ❌ You can't trust the output for production use
+
+With proper context:
+- ✅ AI generates accurate, current, production-ready code
+- ✅ You can iterate faster by letting AI generate boilerplate workflow code
+
+In the next section, we'll see how Kestra's AI Copilot solves this problem.
+
+#### Videos
+
+- **2.5.2 - Context Engineering with ChatGPT**  
+  [![Context Engineering with ChatGPT](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FLmnfjGKwnVU)](https://youtu.be/LmnfjGKwnVU)
+
+---
+
+### 2.5.3 AI Copilot in Kestra
+
+Kestra's AI Copilot is specifically designed to generate and modify Kestra flows with full context about the latest plugins, workflow syntax, and best practices.
+
+#### Setup AI Copilot
+
+Before using AI Copilot, you need to configure Gemini API access in your Kestra instance.
+
+**Step 1: Get Your Gemini API Key**
+
+1. Visit Google AI Studio: https://aistudio.google.com/app/apikey
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy the generated key (keep it secure!)
+
+> [!WARNING]  
+> Never commit API keys to Git. Always use environment variables or Kestra's KV Store.
+
+**Step 2: Configure Kestra AI Copilot**
+
+Add the following to your Kestra configuration. You can do this by modifying your `docker-compose.yml` file from 2.2:
 
 ```yaml
-...
-triggers:
-  # Run at first day of month at 9am
-  - id: green_schedule
-    type: io.kestra.plugin.core.trigger.Schedule
-    cron: "0 9 1 * *"
-    inputs:
-      taxi: green
-
-  # Run at first day of month at 10am
-  - id: yellow_schedule
-    type: io.kestra.plugin.core.trigger.Schedule
-    cron: "0 10 1 * *"
-    inputs:
-      taxi: yellow
+services:
+  kestra:
+    environment:
+      KESTRA_CONFIGURATION: |
+        kestra:
+          ai:
+            type: gemini
+            gemini:
+              model-name: gemini-2.5-flash
+              api-key: ${GEMINI_API_KEY}
 ```
 
-### Backfills
-To fill missed data from previous schedules you can activate backfills in the previously defined triggers
-
-![backfill](images/kestra_backfill.jpg)
-
-Here you can see how the start and end of the backfill is specified. It is also advisable to add a label to the backfill execution to see which executions were backfilled:
-![backfill2](images/kestra_backfill_2.jpg)
-
-
-## 2.2.5 - Orchestrate dbt Models with Postgres in Kestra
-
-This section is to show the capabilities of Kestra with DBT (Data Build Tool), which will be covered in depth in a later part of the class. Up until now there was no "real" transformation of the data as it was just read in and then put in postgres tables.
-
-### Create DBT Workflow
-
-The Kastra-Flow that is used with DBT is [`postgres_taxi.yaml`](flows/postgres_dbt.yaml).
-
-Executing the Kestra-Flow will result in a bunch of new views and tables when looking at pgAdmin:
-
-
-
-## 2.2.6 - ETL Pipelines in Kestra: Google Cloud Platform
-
-For this part of the workflow-orchestration section you need to ...
-
-1. Create a project and name it like "kestra-workspace" or "kestra-project" or something different.
-2. Go to `IAM & admin` -> `[Service accounts]` and then click on `[+ Create Service Account]`
-3. Name the service account `zoomcamp`
-4. Grant the followin roles
-   - `Storage Admin`
-   - `BigQuery Admin`
-5. After creation, click on the new service account and go to the `KEYS` section
-6. Create a new private key in json format by clicking `ADD KEY`
-7. Dowload and save the key to a secure location on your computer
-8. Go to Kestra and create the a Kestra-Flow [`gcp_taxi`](flows/gcp_taxi.yaml) with this yaml-file.
-9. Create [`gcp_kv`](flows/gcp_kv.yaml)-workflow in Kestra and cusrtomize the key-value pairs except the `GCP_CREDS`-value part to your needs
-    - Running the flow will populate most of the key-value pairs that can then be used in the [`gcp_taxi`](flows/gcp_taxi.yaml)-flow
-10. Go to `[Namespaces]` on the left sidebar and choose `zoomcamp`-namespace. Then select `KV Store` on the top-bar
-    - You can now set the obtained credentials as key-value pair with `GCP_CREDS` as key and the obtained json-credentials as value.
-    
-With everything set up you now can execute the following flows in this order:
-1. [**`gcp_setup`**](flows/gcp_setup.yaml): To create GCP resources based on [**`gcp_kv`**](flows/gcp_kv.yaml)
-   - The Bucket and the BigQuery dataset should now be created on GCP
-2. [**`gcp_taxi`**](flows/gcp_taxi.yaml): Run ETL pipelines that uses GCS and BigQuery
-   - Here you have to set the taxi type, year and month and the rest will be done just as before
-
-## 2.2.7 - Manage Schedules and Backfills with BigQuery in Kestra
-
-- Adding schedules to BigQuery workflow
-- How to perform backfills
-
-The flow of this section is [`gcp_taxi_scheduled`](flows/gcp_taxi_scheduled.yaml).
-
-### Add Schedules
-
-The scheduling for GCP is pretty much the same as the offline version
-
-```yaml
-triggers:
-  # Runs at first day of month at 9am
-  - id: green_schedule
-    type: io.kestra.plugin.core.trigger.Schedule
-    cron: "0 9 1 * *"
-    inputs:
-      taxi: green
-  
-  # Runs at first day of month at 10am
-  - id: yellow_schedule
-    type: io.kestra.plugin.core.trigger.Schedule
-    cron: "0 10 1 * *"
-    inputs:
-      taxi: yellow
+Then restart Kestra:
+```bash
+cd 02-workflow-orchestration/docker
+export GEMINI_API_KEY="your-api-key-here"
+docker compose up -d
 ```
 
-The variable `file` now uses `trigger.date` instead of month and year and you only have to select the taxi type when executing the flow:
-```yaml
-variables:
-  file: "{{inputs.taxi}}_tripdata_{{trigger.date | date('yyyy-MM')}}.csv"
-  ...
+#### Exercise: ChatGPT vs AI Copilot Comparison
+
+**Objective:** Learn why context engineering matters.
+
+1. **Open Kestra UI** at http://localhost:8080
+2. **Create a new flow** and open the Code editor panel
+3. **Click the AI Copilot button** (sparkle icon ✨) in the top-right corner
+4. **Enter the same exact prompt** we used with ChatGPT:
+   ```
+   Create a Kestra flow that loads NYC taxi data from a CSV file to BigQuery. The flow should extract data, upload to GCS, and load to BigQuery.
+   ```
+5. **Compare the outputs:**
+   - ✅ Copilot generates executable, working YAML
+   - ✅ Copilot uses correct plugin types and properties
+   - ✅ Copilot follows current Kestra best practices
+
+**Key Learning:** Context matters! AI Copilot has access to current Kestra documentation, generating Kestra flows better than a generic ChatGPT assistant.
+
+#### Videos
+
+- **2.5.3 - AI Copilot in Kestra**  
+  [![AI Copilot in Kestra](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2F3IbjHfC8bMg)](https://youtu.be/3IbjHfC8bMg)
+
+
+### 2.5.4 Bonus: Retrieval Augmented Generation (RAG)
+
+To further learn how to provide context to your prompts, this bonus section demonstrates how to use RAG.
+
+#### What is RAG?
+
+**RAG (Retrieval Augmented Generation)** is a technique that:
+1. **Retrieves** relevant information from your data sources
+2. **Augments** the AI prompt with this context
+3. **Generates** a response grounded in real data
+
+This solves the hallucination problem by ensuring the AI has access to current, accurate information at query time.
+
+#### How RAG Works in Kestra
+
+```mermaid
+graph LR
+    A[Ask AI] --> B[Fetch Docs]
+    B --> C[Create Embeddings]
+    C --> D[Find Similar Content]
+    D --> E[Add Context to Prompt]
+    E --> F[LLM Answer]
 ```
 
-### Run Backfills
+**The Process:**
+1. **Ingest documents**: Load documentation, release notes, or other data sources
+2. **Create embeddings**: Convert text into vector representations using an LLM
+3. **Store embeddings**: Save vectors in Kestra's KV Store (or a vector database)
+4. **Query with context**: When you ask a question, retrieve relevant embeddings and include them in the prompt
+5. **Generate response**: The LLM has real context and provides accurate answers
 
-Same as with the offline variant
+#### Exercise: Retrieval With vs Without Context
 
-![backfill2](images/kestra_backfill_2.jpg)
+**Objective:** Understand how RAG eliminates hallucinations by grounding LLM responses in real data.
+
+**Part A: Without RAG**
+1. Navigate to the [`10_chat_without_rag.yaml`](flows/10_chat_without_rag.yaml) flow in your Kestra UI
+2. Click **Execute**
+3. Wait for the execution to complete
+4. Open the **Logs** tab
+5. Read the output - notice how the response about "Kestra 1.1 features" is:
+   - Vague or generic
+   - Potentially incorrect
+   - Missing specific details
+   - Based only on the model's training data (which may be outdated)
+
+**Part B: With RAG**
+1. Navigate to the [`11_chat_with_rag.yaml`](flows/11_chat_with_rag.yaml) flow
+2. Click **Execute**
+3. Watch the execution:
+   - First task: **Ingests** Kestra 1.1 release documentation, creates **embeddings** and stores them
+   - Second task: **Prompts LLM** with context retrieved from stored embeddings
+4. Open the **Logs** tab
+5. Compare this output with the previous one - notice how it's:
+   - ✅ Specific and detailed
+   - ✅ Accurate with real features from the release
+   - ✅ Grounded in actual documentation
+
+**Key Learning:** RAG (Retrieval Augmented Generation) grounds AI responses in current documentation, eliminating hallucinations and providing accurate, context-aware answers.
+
+#### RAG Best Practices
+
+1. **Keep documents updated**: Regularly re-ingest to ensure current information
+2. **Chunk appropriately**: Break large documents into meaningful chunks
+3. **Test retrieval quality**: Verify that the right documents are retrieved
+
+#### Additional AI Resources
+
+Kestra Documentation:
+- [AI Tools Overview](https://kestra.io/docs/ai-tools)
+- [AI Copilot](https://kestra.io/docs/ai-tools/ai-copilot)
+- [RAG Workflows](https://kestra.io/docs/ai-tools/ai-rag-workflows)
+- [AI Workflows](https://kestra.io/docs/ai-tools/ai-workflows)
+- [Kestra Blueprints](https://kestra.io/blueprints) - Pre-built workflow examples
+
+Kestra Plugin Documentation:
+- [AI Plugin](https://kestra.io/plugins/plugin-ai)
+- [RAG Tasks](https://kestra.io/plugins/plugin-ai/rag)
+
+External Documentation:
+- [Google Gemini](https://ai.google.dev/docs)
+- [Google AI Studio](https://aistudio.google.com/)
+
+#### Videos
+
+- **2.5.4 (Bonus) - Retrieval Augmented Generation**  
+  [![Retrieval Augmented Generation](https://markdown-videos-api.jorgenkh.no/url?url=https%3A%2F%2Fyoutu.be%2FXuPDQ1UcNyI)](https://youtu.be/XuPDQ1UcNyI)
+
+## 2.6 Bonus: Deploy to the Cloud (Optional)
+
+Now that we've got all our pipelines working and we know how to quickly create new flows with Kestra's AI Copilot, we can deploy Kestra to the cloud so it can continue to orchestrate our scheduled pipelines. 
+
+In this bonus section, we'll cover how you can deploy Kestra on Google Cloud and automatically sync your workflows from a Git repository.
+
+Note: When committing your workflows to Kestra, make sure your workflow doesn't contain any sensitive information. You can use [Secrets](https://go.kestra.io/de-zoomcamp/secret) and the [KV Store](https://go.kestra.io/de-zoomcamp/kv-store) to keep sensitive data out of your workflow logic.
+
+#### Resources
+
+- [Install Kestra on Google Cloud](https://go.kestra.io/de-zoomcamp/gcp-install)
+- [Moving from Development to Production](https://go.kestra.io/de-zoomcamp/dev-to-prod)
+- [Using Git in Kestra](https://go.kestra.io/de-zoomcamp/git)
+- [Deploy Flows with GitHub Actions](https://go.kestra.io/de-zoomcamp/deploy-github-actions)
+
+## 2.7 Additional Resources 📚
+
+- Check [Kestra Docs](https://go.kestra.io/de-zoomcamp/docs)
+- Explore our [Blueprints](https://go.kestra.io/de-zoomcamp/blueprints) library
+- Browse over 600 [plugins](https://go.kestra.io/de-zoomcamp/plugins) available in Kestra
+- Give us a star on [GitHub](https://go.kestra.io/de-zoomcamp/github)
+- Join our [Slack community](https://go.kestra.io/de-zoomcamp/slack) if you have any questions
+- Find all the videos in this [YouTube Playlist](https://go.kestra.io/de-zoomcamp/yt-playlist)
 
 
-## 2.2.8 - Orchestrate dbt Models with BigQuery in Kestra
+### Troubleshooting tips
 
-- The Kestra-Flow used here is [`gcp_dbt`](flows/gcp_dbt.yaml). 
-- There is not much to do in terms of configuration due to the setup done by the flow [`gcp_setup`](flows/gcp_setup.yaml).
-- Just clicking `Execute` is enough to run the dbt models and everything will be done in BigQuery.
+If you face any issues with Kestra flows in Module 2, make sure to use the following Docker images/ports:
+- `image: kestra/kestra:v1.1` - pin your Kestra Docker image to this version so we can ensure reproducibility; do NOT use `kestra/kestra:develop` as this is a bleeding-edge development version that might contain bugs
+- `postgres:18` — make sure to pin your Postgres image to version 18
+- If you run `pgAdmin` or something else on port 8080, you can adjust Kestra `docker-compose` to use a different port, e.g. change port mapping to 18080 instead of 8080, and then access Kestra UI in your browser from http://localhost:18080/ instead of from http://localhost:8080/
 
+If you are still facing any issues, stop and remove your existing Kestra + Postgres containers and start them again using `docker-compose up -d`. If this doesn't help, post your question on the DataTalksClub Slack or on Kestra's Slack http://kestra.io/slack.
 
-## Homework
+If you encounter similar errors to:
+```
+BigQueryError{reason=invalid, location=null, 
+message=Error while reading table: kestra-sandbox.zooomcamp.yellow_tripdata_2020_01, 
+error message: CSV table references column position 17, but line contains only 14 columns.; 
+line_number: 2103925 byte_offset_to_start_of_line: 194863028 
+column_index: 17 column_name: "congestion_surcharge" column_type: NUMERIC 
+File: gs://anna-geller/yellow_tripdata_2020-01.csv}
+```
+
+It means that the CSV file you're trying to load into BigQuery has a mismatch in the number of columns between the external source table (i.e. file in GCS) and the destination table in BigQuery. This can happen when for due to network/transfer issues, the file is not fully downloaded from GitHub or not correctly uploaded to GCS. The error suggests schema issues but that's not the case. Simply rerun the entire execution including redownloading the CSV file and reuploading it to GCS. This should resolve the issue.
+
+---
+
+## Homework 
+
+See the [homework/](./homework/homework.md)
