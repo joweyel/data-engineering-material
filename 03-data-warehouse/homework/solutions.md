@@ -1,48 +1,40 @@
 # Module 3 Homework: Data Warehousing & BigQuery
 
-In this homework we'll practice working with BigQuery and Google Cloud Storage.
+## Loading the Data directly in Google Colab
 
-When submitting your homework, you will also need to include
-a link to your GitHub repository or other public code-hosting
-site.
-
-This repository should contain the code for solving the homework.
-
-When your solution has SQL or shell commands and not code
-(e.g. python files) file format, include them directly in
-the README file of your repository.
-
-## Data
-
-For this homework we will be using the Yellow Taxi Trip Records for January 2024 - June 2024 (not the entire year of data).
-
-Parquet Files are available from the New York City Taxi Data found here:
-
-https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page
-
-## Loading the data
-
-You can use the following scripts to load the data into your GCS bucket:
-
-- Python script: [load_yellow_taxi_data.py](./load_yellow_taxi_data.py)
 - Jupyter notebook with DLT: [DLT_upload_to_GCP.ipynb](./DLT_upload_to_GCP.ipynb)
 
-You will need to generate a Service Account with GCS Admin privileges or be authenticated with the Google SDK, and update the bucket name in the script.
+To avoid downloading and uploading data to GCP, the jupyter notebook above can be executed in Google Colab inside the Google ecosystem. This can dramatically reduce the time required for uploading the required data. There are however 2 requirements:
 
-If you are using orchestration tools such as Kestra, Mage, Airflow, or Prefect, do not load the data into BigQuery using the orchestrator.
+1. The GCS bucket that is used has to be created beforehand
+2. The credentials (full json) have to provided as Secret and made accessible to the notebook
 
-Make sure that all 6 files show in your GCS bucket before beginning.
+![Colab](images/colab_upload.png)
 
-Note: You will need to use the PARQUET option when creating an external table.
-
+Move data to bucket-root and remove the dlt folder structure in the Cloud Shell Terminal:
+```bash
+gsutil cp gs://dezoomcamp_hw3_485415/rides_dataset/rides/*.parquet gs://dezoomcamp_hw3_485415
+gsutil rm -r gs://dezoomcamp_hw3_485415/rides_dataset/
+```
 
 ## BigQuery Setup
 
-Create an external table using the Yellow Taxi Trip Records. 
-
-Create a (regular/materialized) table in BQ using the Yellow Taxi Trip Records (do not partition or cluster this table). 
-
-
+1. Create dataset with name `ny_taxi_hw3`
+2. Create an external table using the Yellow Taxi Trip Records:
+   ```sql
+   CREATE OR REPLACE EXTERNAL TABLE `de-zoomcamp-26-485415.ny_taxi_hw3.external_yellow_tripdata`
+   OPTIONS (
+       format = 'PARQUET',
+       uris = [
+           'gs://dezoomcamp_hw3_485415/yellow_tripdata_2024_*.parquet'
+       ]
+   );
+   ```
+4. Create a (regular/materialized) table in BQ using the Yellow Taxi Trip Records (do not partition or cluster this table):
+   ```sql
+   CREATE OR REPLACE TABLE `de-zoomcamp-26-485415.ny_taxi_hw3.yellow_tripdata_materialized` AS
+   SELECT * FROM `de-zoomcamp-26-485415.ny_taxi_hw3.external_yellow_tripdata`;
+   ```
 
 ## Question 1. Counting records
 
@@ -51,6 +43,17 @@ What is count of records for the 2024 Yellow Taxi Data?
 - 840,402
 - 20,332,093
 - 85,431,289
+
+### Answer 1
+
+From Table-Details:
+
+- `20,332,093`
+
+From query result:
+```sql
+SELECT COUNT(1) FROM `de-zoomcamp-26-485415.ny_taxi_hw3.yellow_tripdata_materialized`;
+```
 
 
 ## Question 2. Data read estimation
@@ -131,8 +134,3 @@ It is best practice in Big Query to always cluster your data:
 ## Question 9. Understanding table scans
 
 No Points: Write a `SELECT count(*)` query FROM the materialized table you created. How many bytes does it estimate will be read? Why?
-
-
-## Submitting the solutions
-
-Form for submitting: https://courses.datatalks.club/de-zoomcamp-2026/homework/hw3
