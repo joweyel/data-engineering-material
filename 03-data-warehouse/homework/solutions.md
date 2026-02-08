@@ -86,6 +86,8 @@ FROM
     `de-zoomcamp-26-485415.ny_taxi_hw3.yellow_tripdata_materialized`;
 ```
 
+> - [x] 0 MB for the External Table and 155.12 MB for the Materialized Table
+
 
 ## Question 3. Understanding columnar storage
 
