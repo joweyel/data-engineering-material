@@ -1,0 +1,10 @@
+
+target/
+dbt_packages/
+logs/
+
+# Duckdb Database
+**/*.duckdb
+
+# Data directory
+data/
