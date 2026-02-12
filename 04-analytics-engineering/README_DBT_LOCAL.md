@@ -140,7 +140,7 @@ if __name__ == "__main__":
     for taxi_type in ["yellow", "green"]:
         download_and_convert_files(taxi_type)
 
-    con = duckdb.connect("taxi_rides_ny.duckdb")
+    con = duckdb.connect("taxi_rides_26.duckdb")
     con.execute("CREATE SCHEMA IF NOT EXISTS prod")
 
     for taxi_type in ["yellow", "green"]:
@@ -182,3 +182,147 @@ Now the ui can be closed and dbt connection to it can be tested:
 dbz debug
 ```
 
+
+## dbt Project Structure
+
+### 📂 analyses
+- Place for sql scripts that are not sharable but good to have a around
+- Can used for data quality reports (internal use)
+- Often unused
+
+### 📂 data
+- Directory where data can be saved to
+
+### 📄 dbt_project.yml
+- Most important dbt file
+- Configures entire project
+- Is used when you run a `dbt` cli command
+- For `dbt-core` the profile should match the one in the `.dbt/profiles.yaml`
+
+### 📂 macros
+- Used to store macros that can be applied on tables / views (reusable logic)
+- Help encapsulate logic in one place
+
+### 📄 REAMDE.md
+- Documentation of the projcet
+- Installation / setup guides etc.
+
+
+### 📂 seeds
+- Folder to upload csv amd flat files (to add them to dbt later)
+- Quick and dirty approach
+
+### 📂 snapshots
+- Takes a "picture" of a table of a table at a moment in time
+- Useful to track history of a column that overwrites itself
+
+### 📂 tests
+- Place to put assertions in SQL-format
+- Place for singular tests
+- dbt builds fail if tests fail
+
+### 📂 models
+- dbt suggests 3 subfolters
+
+#### 📂 staging
+- Sources (raw table from database)
+- Staging files are 1-to-1 copy of data with minimal cleaning steps
+  - Data type change
+  - Renaming columns
+  - Removing columns that are "bad"
+  - ...
+
+#### 📂 intermediate
+
+- Anything that is not raw or you dont want to expose
+- No guidelines, just nice for heave duty cleaning of complex logic
+
+#### 📂 marts
+- If data is in marts, it is ready for "consumption"
+- Tables ready for dashboards
+- Properly modeled, clean tables
+
+
+## dbt Sources
+
+Step where you tell your dbt Project where to get the data from. 
+
+Create `staging/` folder and `sources.yaml`:
+```bash
+cd taxi_rides_26/models
+mkdir -p staging
+cd staging
+touch sources.yaml
+```
+
+<details>
+
+<summary><b>sources.yaml</b></summary>
+
+```yaml
+version: 2
+
+sources:
+  - name: raw_data
+    description: "Raw data source for NYC taxi rides"
+    database: taxi_rides_26 # Google BQ: Project ID
+    schema: prod            # Google BQ: Dataset name
+    tables:                 # Google BQ: Table name
+      - name: yellow_tripdata
+      - name: green_tripdata
+```
+
+</details>
+
+
+Create first SQL file:
+
+```bash
+# in `staging` folder ("stg" for staging table)
+touch stg_green_tripdata.sql
+```
+
+This file should do as much cleaning as possible. For this you should:
+
+- Group the columns by relevant categories
+- Use sensible aliases for columns
+- Cast columns to desired datatype
+
+<details>
+
+<summary><b>stg_green_tripdata.sql</b></summary>
+
+```sql
+SELECT
+    -- identifiers
+    CAST(vendorid AS INT) AS vendor_id,
+    CAST(ratecodeid AS INT) AS rate_code_id,
+    CAST(pulocationid AS INT) AS pickup_location_id,
+    CAST(dolocationid AS INT) AS dropoff_location_id,
+
+    -- timestamps
+    CAST(lpep_pickup_datetime AS TIMESTAMP) AS pickup_datetime,
+    CAST(lpep_dropoff_datetime AS TIMESTAMP) AS dropoff_datetime,
+
+    -- trip info
+    store_and_fwd_flag,
+    CAST(passenger_count AS INT),
+    CAST(trip_distance AS FLOAT),
+    CAST(trip_type AS INT),
+
+    -- payment info
+    CAST(fare_amount AS NUMERIC),
+    CAST(extra AS NUMERIC),
+    CAST(mta_tax AS NUMERIC),
+    CAST(tip_amount AS NUMERIC),
+    CAST(tolls_amount AS NUMERIC),
+    CAST(improvement_surcharge AS NUMERIC),
+    CAST(total_amount AS NUMERIC),
+    CAST(payment_type AS INT)
+FROM
+    {{ source('raw_data', 'green_tripdata') }}  -- Get data from configured datasource
+WHERE
+    vendor_id IS NOT NULL;
+```
+
+</details>

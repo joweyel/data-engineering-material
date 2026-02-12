@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: raw_data
+    description: "Raw data source for NYC taxi rides"
+    database: taxi_rides_26 # Google BQ: Project ID
+    schema: prod            # Google BQ: Dataset name
+    tables:                 # Google BQ: Table name
+      - name: yellow_tripdata
+      - name: green_tripdata
