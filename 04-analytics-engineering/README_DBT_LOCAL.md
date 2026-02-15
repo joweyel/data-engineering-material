@@ -295,10 +295,10 @@ This file should do as much cleaning as possible. For this you should:
 ```sql
 SELECT
     -- identifiers
-    CAST(vendorid AS INT) AS vendor_id,
-    CAST(ratecodeid AS INT) AS rate_code_id,
-    CAST(pulocationid AS INT) AS pickup_location_id,
-    CAST(dolocationid AS INT) AS dropoff_location_id,
+    CAST(vendorid AS INTEGER) AS vendor_id,
+    CAST(ratecodeid AS INTEGER) AS rate_code_id,
+    CAST(pulocationid AS INTEGER) AS pickup_location_id,
+    CAST(dolocationid AS INTEGER) AS dropoff_location_id,
 
     -- timestamps
     CAST(lpep_pickup_datetime AS TIMESTAMP) AS pickup_datetime,
@@ -306,9 +306,9 @@ SELECT
 
     -- trip info
     store_and_fwd_flag,
-    CAST(passenger_count AS INT),
+    CAST(passenger_count AS INTEGER),
     CAST(trip_distance AS FLOAT),
-    CAST(trip_type AS INT),
+    CAST(trip_type AS INTEGER),
 
     -- payment info
     CAST(fare_amount AS NUMERIC),
@@ -318,11 +318,177 @@ SELECT
     CAST(tolls_amount AS NUMERIC),
     CAST(improvement_surcharge AS NUMERIC),
     CAST(total_amount AS NUMERIC),
-    CAST(payment_type AS INT)
+    CAST(payment_type AS INTEGER)
 FROM
-    {{ source('raw_data', 'green_tripdata') }}  -- Get data from configured datasource
+    {{ source('raw_data', 'green_tripdata') }}
 WHERE
     vendor_id IS NOT NULL;
 ```
 
 </details>
+
+<details>
+
+<summary><b>stg_yellow_tripdata.sql</b></summary>
+
+```sql
+SELECT
+    -- identifiers (standardized naming for consistency across yellow/green)
+    CAST(vendorid AS INTEGER) AS vendor_id,
+    CAST(ratecodeid AS INTEGER) AS rate_code_id,
+    CAST(pulocationid AS INTEGER) AS pickup_location_id,
+    CAST(dolocationid AS INTEGER) AS dropoff_location_id,
+
+    -- timestamps (standardized naming)
+    CAST(tpep_pickup_datetime AS timestamp) AS pickup_datetime,  -- tpep = Taxicab Passenger Enhancement Program (yellow taxis)
+    CAST(tpep_dropoff_datetime AS timestamp) AS dropoff_datetime,
+
+    -- trip info
+    CAST(store_and_fwd_flag AS string) AS store_and_fwd_flag,
+    CAST(passenger_count AS INTEGER) AS passenger_count,
+    CAST(trip_distance AS NUMERIC) AS trip_distance,
+
+    -- payment info
+    CAST(fare_amount AS NUMERIC) AS fare_amount,
+    CAST(extra AS NUMERIC) AS extra,
+    CAST(mta_tax AS NUMERIC) AS mta_tax,
+    CAST(tip_amount AS NUMERIC) AS tip_amount,
+    CAST(tolls_amount AS NUMERIC) AS tolls_amount,
+    CAST(improvement_surcharge AS NUMERIC) AS improvement_surcharge,
+    CAST(total_amount AS NUMERIC) AS total_amount,
+    CAST(payment_type AS INTEGER) AS payment_type
+FROM
+    {{ source('raw_data', 'yellow_tripdata') }}
+WHERE
+    vendor_id IS NOT NULL;
+```
+
+</details>
+
+## dbt Models
+
+Create `models/marts/` directory
+
+```bash
+mkdir -p taxi_rides_26/models/marts/reporting/
+```
+
+Create model:
+```
+touch -p taxi_rides_26/models/marts/reporting/monthly_revenue_by_location.py
+```
+
+### Important Model types
+
+- **Dimension tables**: 
+  - Descriptive reference data about business entities (who, what, where, when) - e.g., customers, products, locations, dates.
+
+- **Fact tables**:
+  - Measurable numeric data (metrics/events) with foreign keys linking to dimensions - e.g., sales transactions, page views, orders.
+
+
+Create tables in the `models/marts/` directory:
+
+```bash
+touch dim_vendors.sql 
+touch dim_locations.sql
+```
+
+Union of green and yellow data will be done in an intermediate model, for which a folder is created in the `models` directory:
+
+```bash
+mkdir intermediate
+cd intermediate
+# Create intermediate model
+touch int_trips_unioned.sql
+```
+
+
+
+## dbt Seeds and Macros
+
+Go to `seeds` folder and download the `taxi_zone_lookup.csv`:
+```bash
+wget -c https://github.com/DataTalksClub/data-engineering-zoomcamp/raw/refs/heads/main/04-analytics-engineering/taxi_rides_ny/seeds/taxi_zone_lookup.csv
+```
+
+Seed the table to make it accessible as dbt model:
+```bash
+dbt seed
+```
+
+To consider:
+
+- Dont push large datasets to git
+- Dont have confidential data here (if working with git etc.)
+
+
+### dim_locations.sql
+
+```sql
+WITH taxi_zone_lookup AS (
+    SELECT * FROM {{ ref('taxi_zone_lookup') }}
+),
+renamed AS (
+    SELECT
+        locationid AS location_id,
+        borough,
+        zone,
+        service_zone
+    FROM taxi_zone_lookup
+)
+
+SELECT * FROM taxi_zone_lookup
+```
+
+### dim_vendors.sql
+
+Vendors are hardcoded here -> can be made more adaptive / general with macro
+
+```sql
+WITH trips_unioned AS (
+    SELECT * FROM {{ ref("int_trips_unioned") }}
+),
+vendors AS (
+    SELECT
+        DISTINCT(vendor_id),
+        CASE 
+            WHEN vendor_id = 1 THEN 'Creative Mobile Te3chnologies, LLC'
+            WHEN vendor_id = 2 THEN 'VeriFone Inc.'
+            WHEN vendor_id = 4 THEN 'Unknown Vendor'
+        END AS vendor_name
+    FROM
+        trips_unioned
+)
+
+SELECT * FROM vendors
+```
+
+Create macro `get_vendor_names.sql` in `macros` folder:
+```sql
+{% macro get_vendor_names(vendor_id) -%}
+CASE
+    WHEN {{ vendor_id }} = 1 THEN 'Creative Mobile Te3chnologies, LLC'
+    WHEN {{ vendor_id }} = 2 THEN 'VeriFone Inc.'
+    WHEN {{ vendor_id }} = 4 THEN 'Unknown Vendor'
+END
+{%- endmacro %}
+```
+
+Use macro in `dim_vendors.sql`:
+```sql
+WITH trips_unioned AS (
+    SELECT * FROM {{ ref("int_trips_unioned") }}
+),
+vendors AS (
+    SELECT
+        DISTINCT(vendor_id),
+        {{ get_vendor_names('vendor_id') }} AS vendor_name
+    FROM
+        trips_unioned
+)
+
+SELECT * FROM vendors
+```
+
+Now this macro can be used everywhere and only the macro has to be changed for adapting to changes.

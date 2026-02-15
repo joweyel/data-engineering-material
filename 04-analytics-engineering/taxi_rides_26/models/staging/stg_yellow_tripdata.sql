@@ -1,29 +1,42 @@
-SELECT
-    -- identifiers (standardized naming for consistency across yellow/green)
-    CAST(vendorid AS INTEGER) AS vendor_id,
-    CAST(ratecodeid AS INTEGER) AS rate_code_id,
-    CAST(pulocationid AS INTEGER) AS pickup_location_id,
-    CAST(dolocationid AS INTEGER) AS dropoff_location_id,
+with source as (
+    select * from {{ source('raw', 'yellow_tripdata') }}
+),
 
-    -- timestamps (standardized naming)
-    CAST(tpep_pickup_datetime AS timestamp) AS pickup_datetime,  -- tpep = Taxicab Passenger Enhancement Program (yellow taxis)
-    CAST(tpep_dropoff_datetime AS timestamp) AS dropoff_datetime,
+renamed as (
+    select
+        -- identifiers (standardized naming for consistency across yellow/green)
+        cast(vendorid as integer) as vendor_id,
+        cast(ratecodeid as integer) as rate_code_id,
+        cast(pulocationid as integer) as pickup_location_id,
+        cast(dolocationid as integer) as dropoff_location_id,
 
-    -- trip info
-    CAST(store_and_fwd_flag AS string) AS store_and_fwd_flag,
-    CAST(passenger_count AS INTEGER) AS passenger_count,
-    CAST(trip_distance AS NUMERIC) AS trip_distance,
+        -- timestamps (standardized naming)
+        cast(tpep_pickup_datetime as timestamp) as pickup_datetime,  -- tpep = Taxicab Passenger Enhancement Program (yellow taxis)
+        cast(tpep_dropoff_datetime as timestamp) as dropoff_datetime,
 
-    -- payment info
-    CAST(fare_amount AS NUMERIC) AS fare_amount,
-    CAST(extra AS NUMERIC) AS extra,
-    CAST(mta_tax AS NUMERIC) AS mta_tax,
-    CAST(tip_amount AS NUMERIC) AS tip_amount,
-    CAST(tolls_amount AS NUMERIC) AS tolls_amount,
-    CAST(improvement_surcharge AS NUMERIC) AS improvement_surcharge,
-    CAST(total_amount AS NUMERIC) AS total_amount,
-    CAST(payment_type AS INTEGER) AS payment_type
-FROM
-    {{ source('raw_data', 'yellow_tripdata') }}
-WHERE
-    vendor_id IS NOT NONE;
+        -- trip info
+        cast(store_and_fwd_flag as string) as store_and_fwd_flag,
+        cast(passenger_count as integer) as passenger_count,
+        cast(trip_distance as numeric) as trip_distance,
+
+        -- payment info
+        cast(fare_amount as numeric) as fare_amount,
+        cast(extra as numeric) as extra,
+        cast(mta_tax as numeric) as mta_tax,
+        cast(tip_amount as numeric) as tip_amount,
+        cast(tolls_amount as numeric) as tolls_amount,
+        cast(improvement_surcharge as numeric) as improvement_surcharge,
+        cast(total_amount as numeric) as total_amount,
+        cast(payment_type as integer) as payment_type
+
+    from source
+    -- Filter out records with null vendor_id (data quality requirement)
+    where vendorid is not null
+)
+
+select * from renamed
+
+-- Sample records for dev environment using deterministic date filter
+{% if target.name == 'dev' %}
+where pickup_datetime >= '2019-01-01' and pickup_datetime < '2019-02-01'
+{% endif %}
