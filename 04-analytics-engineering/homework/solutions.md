@@ -1,5 +1,3 @@
-Thanks to amazing foresight last year I was able to get my hands on RAM that was able to handle this locally.
-
 ## Question 1. dbt Lineage and Execution
 
 Given a dbt project with the following structure:
