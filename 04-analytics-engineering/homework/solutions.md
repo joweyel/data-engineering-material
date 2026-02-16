@@ -163,6 +163,8 @@ Result:
 │          384624          │
 └──────────────────────────┘
 ```
+> `384,624`
+
 
 
 ## Question 6. Build a Staging Model for FHV Data
