@@ -16,7 +16,7 @@ My study material to the Data Engineering class by DataTalks.Club.
 ### [Module 2: Workflow Orchestration](02-workflow-orchestration/)
 * Data Lake
 * Workflow orchestration
-* Workflow orchestration with Mage
+* Workflow orchestration with [Mage](02-workflow-orchestration-mage), [Kesta](02-workflow-orchestration-kestra-26)
 * Homework
 
 ### [Workshop 1: Data Ingestion](workshop-1-data-ingestion-with-dlt)
