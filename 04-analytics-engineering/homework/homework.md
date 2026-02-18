@@ -1,87 +1,121 @@
-## Module 4 Homework 
+# Module 4 Homework: Analytics Engineering with dbt
 
-In this homework, we'll use the models developed during the week 4 videos and enhance the already presented dbt project using the already loaded Taxi data for fhv vehicles for year 2019 in our DWH.
+In this homework, we'll use the dbt project in `04-analytics-engineering/taxi_rides_ny/` to transform NYC taxi data and answer questions by querying the models.
 
-This means that in this homework we use the following data [Datasets list](https://github.com/DataTalksClub/nyc-tlc-data/)
-* Yellow taxi data - Years 2019 and 2020
-* Green taxi data - Years 2019 and 2020 
-* fhv data - Year 2019. 
+## Setup
 
-We will use the data loaded for:
+1. Set up your dbt project following the [setup guide](../../../04-analytics-engineering/setup/)
+2. Load the Green and Yellow taxi data for 2019-2020 into your warehouse
+3. Run `dbt build --target prod` to create all models and run tests
 
-* Building a source table: `stg_fhv_tripdata`
-* Building a fact table: `fact_fhv_trips`
-* Create a dashboard 
+> **Note:** By default, dbt uses the `dev` target. You must use `--target prod` to build the models in the production dataset, which is required for the homework queries below.
 
-If you don't have access to GCP, you can do this locally using the ingested data from your Postgres database
-instead. If you have access to GCP, you don't need to do it for local Postgres - only if you want to.
+After a successful build, you should have models like `fct_trips`, `dim_zones`, and `fct_monthly_zone_revenue` in your warehouse.
 
-> **Note**: if your answer doesn't match exactly, select the closest option 
+---
 
-### Question 1: 
+### Question 1. dbt Lineage and Execution
 
-**What happens when we execute `dbt build --vars '{'is_test_run': 'true'}'`**
-You'll need to have completed the ["Build the first dbt models"](https://www.youtube.com/watch?v=UVI30Vxzd6c) video. 
-- It's the same as running *dbt build*
-- It applies a _limit 100_ to all of our models
-- It applies a _limit 100_ only to our staging models
-- Nothing
+Given a dbt project with the following structure:
 
-### Question 2: 
+```
+models/
+├── staging/
+│   ├── stg_green_tripdata.sql
+│   └── stg_yellow_tripdata.sql
+└── intermediate/
+    └── int_trips_unioned.sql (depends on stg_green_tripdata & stg_yellow_tripdata)
+```
 
-**What is the code that our CI job will run? Where is this code coming from?**
+If you run `dbt run --select int_trips_unioned`, what models will be built?
 
-- The code that has been merged into the main branch
-- The code that is behind the creation object on the dbt_cloud_pr_ schema
-- The code from any development branch that has been opened based on main
-- The code from the development branch we are requesting to merge to main
+- `stg_green_tripdata`, `stg_yellow_tripdata`, and `int_trips_unioned` (upstream dependencies)
+- Any model with upstream and downstream dependencies to `int_trips_unioned`
+- `int_trips_unioned` only
+- `int_trips_unioned`, `int_trips`, and `fct_trips` (downstream dependencies)
 
+---
 
-### Question 3 (2 points)
+### Question 2. dbt Tests
 
-**What is the count of records in the model fact_fhv_trips after running all dependencies with the test run variable disabled (:false)?**  
-Create a staging model for the fhv data, similar to the ones made for yellow and green data. Add an additional filter for keeping only records with pickup time in year 2019.
-Do not add a deduplication step. Run this models without limits (is_test_run: false).
+You've configured a generic test like this in your `schema.yml`:
 
-Create a core model similar to fact trips, but selecting from stg_fhv_tripdata and joining with dim_zones.
-Similar to what we've done in fact_trips, keep only records with known pickup and dropoff locations entries for pickup and dropoff locations. 
-Run the dbt model without limits (is_test_run: false).
+```yaml
+columns:
+  - name: payment_type
+    data_tests:
+      - accepted_values:
+          arguments:
+            values: [1, 2, 3, 4, 5]
+            quote: false
+```
 
-- 12998722
-- 22998722
-- 32998722
-- 42998722
+Your model `fct_trips` has been running successfully for months. A new value `6` now appears in the source data.
 
-### Question 4 (2 points)
+What happens when you run `dbt test --select fct_trips`?
 
-**What is the service that had the most rides during the month of July 2019 month with the biggest amount of rides after building a tile for the fact_fhv_trips table?**
+- dbt will skip the test because the model didn't change
+- dbt will fail the test, returning a non-zero exit code
+- dbt will pass the test with a warning about the new value
+- dbt will update the configuration to include the new value
 
-Create a dashboard with some tiles that you find interesting to explore the data. One tile should show the amount of trips per month, as done in the videos for fact_trips, including the fact_fhv_trips data.
+---
 
-- FHV
-- Green
-- Yellow
-- FHV and Green
+### Question 3. Counting Records in `fct_monthly_zone_revenue`
 
+After running your dbt project, query the `fct_monthly_zone_revenue` model.
+
+What is the count of records in the `fct_monthly_zone_revenue` model?
+
+- 12,998
+- 14,120
+- 12,184
+- 15,421
+
+---
+
+### Question 4. Best Performing Zone for Green Taxis (2020)
+
+Using the `fct_monthly_zone_revenue` table, find the pickup zone with the **highest total revenue** (`revenue_monthly_total_amount`) for **Green** taxi trips in 2020.
+
+Which zone had the highest revenue?
+
+- East Harlem North
+- Morningside Heights
+- East Harlem South
+- Washington Heights South
+
+---
+
+### Question 5. Green Taxi Trip Counts (October 2019)
+
+Using the `fct_monthly_zone_revenue` table, what is the **total number of trips** (`total_monthly_trips`) for Green taxis in October 2019?
+
+- 500,234
+- 350,891
+- 384,624
+- 421,509
+
+---
+
+### Question 6. Build a Staging Model for FHV Data
+
+Create a staging model for the **For-Hire Vehicle (FHV)** trip data for 2019.
+
+1. Load the [FHV trip data for 2019](https://github.com/DataTalksClub/nyc-tlc-data/releases/tag/fhv) into your data warehouse
+2. Create a staging model `stg_fhv_tripdata` with these requirements:
+   - Filter out records where `dispatching_base_num IS NULL`
+   - Rename fields to match your project's naming conventions (e.g., `PUlocationID` → `pickup_location_id`)
+
+What is the count of records in `stg_fhv_tripdata`?
+
+- 42,084,899
+- 43,244,693
+- 22,998,722
+- 44,112,187
+
+---
 
 ## Submitting the solutions
 
-* Form for submitting: https://courses.datatalks.club/de-zoomcamp-2024/homework/hw4
-
-Deadline: 24 February (Thursday), 23:00 CET
-
-
-## Solution
-
-* Answers:
-  * `Question 1`: It applies a _limit 100_ only to our staging models
-  * `Question 2`: The code from the development branch we are requesting to merge to main
-  * `Question 3`: 22,998,722
-  * `Question 4`: Yellow
-
-- The code that was used to get the solutions can be found in the folder for the [dbt project](../taxi_rides_ny/)
-  - Most relevant files: [stg_fhv_tripdata.sql](code/stg_fhv_tripdata.sql), [fact_fhv_trips.sql](code/fact_fhv_trips.sql)
-
-- The dashboard for Question 4 can be found [here](https://lookerstudio.google.com/reporting/65a18465-fadd-4410-87b4-c9243fdb7555)
-  - You need a google account to see the dashboard
-  - Currently rudimentary but sufficient (due to time constraint)
+- Form for submitting: <https://courses.datatalks.club/de-zoomcamp-2026/homework/hw4>

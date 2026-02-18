@@ -140,7 +140,7 @@ if __name__ == "__main__":
     for taxi_type in ["yellow", "green"]:
         download_and_convert_files(taxi_type)
 
-    con = duckdb.connect("taxi_rides_ny.duckdb")
+    con = duckdb.connect("taxi_rides_26.duckdb")
     con.execute("CREATE SCHEMA IF NOT EXISTS prod")
 
     for taxi_type in ["yellow", "green"]:
@@ -182,3 +182,313 @@ Now the ui can be closed and dbt connection to it can be tested:
 dbz debug
 ```
 
+
+## dbt Project Structure
+
+### 📂 analyses
+- Place for sql scripts that are not sharable but good to have a around
+- Can used for data quality reports (internal use)
+- Often unused
+
+### 📂 data
+- Directory where data can be saved to
+
+### 📄 dbt_project.yml
+- Most important dbt file
+- Configures entire project
+- Is used when you run a `dbt` cli command
+- For `dbt-core` the profile should match the one in the `.dbt/profiles.yaml`
+
+### 📂 macros
+- Used to store macros that can be applied on tables / views (reusable logic)
+- Help encapsulate logic in one place
+
+### 📄 REAMDE.md
+- Documentation of the projcet
+- Installation / setup guides etc.
+
+
+### 📂 seeds
+- Folder to upload csv amd flat files (to add them to dbt later)
+- Quick and dirty approach
+
+### 📂 snapshots
+- Takes a "picture" of a table of a table at a moment in time
+- Useful to track history of a column that overwrites itself
+
+### 📂 tests
+- Place to put assertions in SQL-format
+- Place for singular tests
+- dbt builds fail if tests fail
+
+### 📂 models
+- dbt suggests 3 subfolters
+
+#### 📂 staging
+- Sources (raw table from database)
+- Staging files are 1-to-1 copy of data with minimal cleaning steps
+  - Data type change
+  - Renaming columns
+  - Removing columns that are "bad"
+  - ...
+
+#### 📂 intermediate
+
+- Anything that is not raw or you dont want to expose
+- No guidelines, just nice for heave duty cleaning of complex logic
+
+#### 📂 marts
+- If data is in marts, it is ready for "consumption"
+- Tables ready for dashboards
+- Properly modeled, clean tables
+
+
+## dbt Sources
+
+Step where you tell your dbt Project where to get the data from. 
+
+Create `staging/` folder and `sources.yaml`:
+```bash
+cd taxi_rides_26/models
+mkdir -p staging
+cd staging
+touch sources.yaml
+```
+
+<details>
+
+<summary><b>sources.yaml</b></summary>
+
+```yaml
+version: 2
+
+sources:
+  - name: raw_data
+    description: "Raw data source for NYC taxi rides"
+    database: taxi_rides_26 # Google BQ: Project ID
+    schema: prod            # Google BQ: Dataset name
+    tables:                 # Google BQ: Table name
+      - name: yellow_tripdata
+      - name: green_tripdata
+```
+
+</details>
+
+
+Create first SQL file:
+
+```bash
+# in `staging` folder ("stg" for staging table)
+touch stg_green_tripdata.sql
+```
+
+This file should do as much cleaning as possible. For this you should:
+
+- Group the columns by relevant categories
+- Use sensible aliases for columns
+- Cast columns to desired datatype
+
+<details>
+
+<summary><b>stg_green_tripdata.sql</b></summary>
+
+```sql
+SELECT
+    -- identifiers
+    CAST(vendorid AS INTEGER) AS vendor_id,
+    CAST(ratecodeid AS INTEGER) AS rate_code_id,
+    CAST(pulocationid AS INTEGER) AS pickup_location_id,
+    CAST(dolocationid AS INTEGER) AS dropoff_location_id,
+
+    -- timestamps
+    CAST(lpep_pickup_datetime AS TIMESTAMP) AS pickup_datetime,
+    CAST(lpep_dropoff_datetime AS TIMESTAMP) AS dropoff_datetime,
+
+    -- trip info
+    store_and_fwd_flag,
+    CAST(passenger_count AS INTEGER),
+    CAST(trip_distance AS FLOAT),
+    CAST(trip_type AS INTEGER),
+
+    -- payment info
+    CAST(fare_amount AS NUMERIC),
+    CAST(extra AS NUMERIC),
+    CAST(mta_tax AS NUMERIC),
+    CAST(tip_amount AS NUMERIC),
+    CAST(tolls_amount AS NUMERIC),
+    CAST(improvement_surcharge AS NUMERIC),
+    CAST(total_amount AS NUMERIC),
+    CAST(payment_type AS INTEGER)
+FROM
+    {{ source('raw_data', 'green_tripdata') }}
+WHERE
+    vendor_id IS NOT NULL;
+```
+
+</details>
+
+<details>
+
+<summary><b>stg_yellow_tripdata.sql</b></summary>
+
+```sql
+SELECT
+    -- identifiers (standardized naming for consistency across yellow/green)
+    CAST(vendorid AS INTEGER) AS vendor_id,
+    CAST(ratecodeid AS INTEGER) AS rate_code_id,
+    CAST(pulocationid AS INTEGER) AS pickup_location_id,
+    CAST(dolocationid AS INTEGER) AS dropoff_location_id,
+
+    -- timestamps (standardized naming)
+    CAST(tpep_pickup_datetime AS timestamp) AS pickup_datetime,  -- tpep = Taxicab Passenger Enhancement Program (yellow taxis)
+    CAST(tpep_dropoff_datetime AS timestamp) AS dropoff_datetime,
+
+    -- trip info
+    CAST(store_and_fwd_flag AS string) AS store_and_fwd_flag,
+    CAST(passenger_count AS INTEGER) AS passenger_count,
+    CAST(trip_distance AS NUMERIC) AS trip_distance,
+
+    -- payment info
+    CAST(fare_amount AS NUMERIC) AS fare_amount,
+    CAST(extra AS NUMERIC) AS extra,
+    CAST(mta_tax AS NUMERIC) AS mta_tax,
+    CAST(tip_amount AS NUMERIC) AS tip_amount,
+    CAST(tolls_amount AS NUMERIC) AS tolls_amount,
+    CAST(improvement_surcharge AS NUMERIC) AS improvement_surcharge,
+    CAST(total_amount AS NUMERIC) AS total_amount,
+    CAST(payment_type AS INTEGER) AS payment_type
+FROM
+    {{ source('raw_data', 'yellow_tripdata') }}
+WHERE
+    vendor_id IS NOT NULL;
+```
+
+</details>
+
+## dbt Models
+
+Create `models/marts/` directory
+
+```bash
+mkdir -p taxi_rides_26/models/marts/reporting/
+```
+
+Create model:
+```
+touch -p taxi_rides_26/models/marts/reporting/monthly_revenue_by_location.py
+```
+
+### Important Model types
+
+- **Dimension tables**: 
+  - Descriptive reference data about business entities (who, what, where, when) - e.g., customers, products, locations, dates.
+
+- **Fact tables**:
+  - Measurable numeric data (metrics/events) with foreign keys linking to dimensions - e.g., sales transactions, page views, orders.
+
+
+Create tables in the `models/marts/` directory:
+
+```bash
+touch dim_vendors.sql 
+touch dim_locations.sql
+```
+
+Union of green and yellow data will be done in an intermediate model, for which a folder is created in the `models` directory:
+
+```bash
+mkdir intermediate
+cd intermediate
+# Create intermediate model
+touch int_trips_unioned.sql
+```
+
+
+
+## dbt Seeds and Macros
+
+Go to `seeds` folder and download the `taxi_zone_lookup.csv`:
+```bash
+wget -c https://github.com/DataTalksClub/data-engineering-zoomcamp/raw/refs/heads/main/04-analytics-engineering/taxi_rides_ny/seeds/taxi_zone_lookup.csv
+```
+
+Seed the table to make it accessible as dbt model:
+```bash
+dbt seed
+```
+
+To consider:
+
+- Dont push large datasets to git
+- Dont have confidential data here (if working with git etc.)
+
+
+### dim_locations.sql
+
+```sql
+WITH taxi_zone_lookup AS (
+    SELECT * FROM {{ ref('taxi_zone_lookup') }}
+),
+renamed AS (
+    SELECT
+        locationid AS location_id,
+        borough,
+        zone,
+        service_zone
+    FROM taxi_zone_lookup
+)
+
+SELECT * FROM taxi_zone_lookup
+```
+
+### dim_vendors.sql
+
+Vendors are hardcoded here -> can be made more adaptive / general with macro
+
+```sql
+WITH trips_unioned AS (
+    SELECT * FROM {{ ref("int_trips_unioned") }}
+),
+vendors AS (
+    SELECT
+        DISTINCT(vendor_id),
+        CASE 
+            WHEN vendor_id = 1 THEN 'Creative Mobile Te3chnologies, LLC'
+            WHEN vendor_id = 2 THEN 'VeriFone Inc.'
+            WHEN vendor_id = 4 THEN 'Unknown Vendor'
+        END AS vendor_name
+    FROM
+        trips_unioned
+)
+
+SELECT * FROM vendors
+```
+
+Create macro `get_vendor_names.sql` in `macros` folder:
+```sql
+{% macro get_vendor_names(vendor_id) -%}
+CASE
+    WHEN {{ vendor_id }} = 1 THEN 'Creative Mobile Te3chnologies, LLC'
+    WHEN {{ vendor_id }} = 2 THEN 'VeriFone Inc.'
+    WHEN {{ vendor_id }} = 4 THEN 'Unknown Vendor'
+END
+{%- endmacro %}
+```
+
+Use macro in `dim_vendors.sql`:
+```sql
+WITH trips_unioned AS (
+    SELECT * FROM {{ ref("int_trips_unioned") }}
+),
+vendors AS (
+    SELECT
+        DISTINCT(vendor_id),
+        {{ get_vendor_names('vendor_id') }} AS vendor_name
+    FROM
+        trips_unioned
+)
+
+SELECT * FROM vendors
+```
+
+Now this macro can be used everywhere and only the macro has to be changed for adapting to changes.

@@ -58,7 +58,7 @@ if __name__ == "__main__":
     for taxi_type in ["yellow", "green"]:
         download_and_convert_files(taxi_type)
 
-    con = duckdb.connect("taxi_rides_26.duckdb")
+    con = duckdb.connect("taxi_rides_ny.duckdb")
     con.execute("CREATE SCHEMA IF NOT EXISTS prod")
 
     for taxi_type in ["yellow", "green"]:
