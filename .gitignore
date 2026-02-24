@@ -209,3 +209,8 @@ dtc-de-*.json
 *.csv
 *.csv.gz
 *.parquet
+
+**/.bruin.yml
+.bruin.yml
+logs/runs
+logs/*.log
