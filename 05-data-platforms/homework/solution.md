@@ -27,7 +27,6 @@ In a Bruin project, what are the required files/directories?
 
 > - `.bruin.yml` and `pipeline/` with `pipeline.yml` and `assets/`
 
----
 
 
 ### Question 2. Materialization Strategies
@@ -43,7 +42,6 @@ You're building a pipeline that processes NYC taxi data organized by month based
 
 > - `time_interval` - incremental based on a time column
 
----
 
 
 ### Question 3. Pipeline Variables
@@ -71,7 +69,6 @@ How do you override this when running the pipeline to only process yellow taxis?
 > - `bruin run --var 'taxi_types=["yellow"]'`
 
 
----
 
 ### Question 4. Running with Dependencies
 
@@ -84,9 +81,9 @@ You've modified the `ingestion/trips.py` asset and want to run it plus all downs
 
 #### Answer 4
 
-TODO
+`bruin run ingestion/trips.py --downstream`
 
----
+Source: https://getbruin.com/docs/bruin/commands/run#flags
 
 
 ### Question 5. Quality Checks
@@ -98,7 +95,12 @@ You want to ensure the `pickup_datetime` column in your trips table never has NU
 - `name: positive`
 - `name: accepted_values, value: [not_null]`
 
----
+#### Answer 5
+
+- `name: not_null`
+
+Source: https://getbruin.com/docs/bruin/quality/available_checks#not-null
+
 
 ### Question 6. Lineage and Dependencies
 
@@ -109,7 +111,12 @@ After building your pipeline, you want to visualize the dependency graph between
 - `bruin lineage`
 - `bruin show`
 
----
+#### Answer 6
+
+- `bruin lineage`
+
+Source: https://getbruin.com/docs/bruin/commands/lineage
+
 
 ### Question 7. First-Time Run
 
@@ -120,53 +127,7 @@ You're running a Bruin pipeline for the first time on a new DuckDB database. Wha
 - `--full-refresh`
 - `--truncate`
 
----
 
-## Submitting the solutions
+#### Answer 7
 
-- Form for submitting: <https://courses.datatalks.club/de-zoomcamp-2026/homework/hw5>
-
-=======
-
-## Learning in Public
-
-We encourage everyone to share what they learned. This is called "learning in public".
-
-Read more about the benefits [here](https://alexeyondata.substack.com/p/benefits-of-learning-in-public-and).
-
-### Example post for LinkedIn
-
-```
-🚀 Week 5 of Data Engineering Zoomcamp by @DataTalksClub complete!
-
-Just finished Module 5 - Data Platforms with Bruin. Learned how to:
-
-✅ Build end-to-end ELT pipelines with Bruin
-✅ Configure environments and connections
-✅ Use materialization strategies for incremental processing
-✅ Add data quality checks to ensure data integrity
-✅ Deploy pipelines from local to cloud (BigQuery)
-
-Modern data platforms in a single CLI tool - no vendor lock-in!
-
-Here's my homework solution: <LINK>
-
-Following along with this amazing free course - who else is learning data engineering?
-
-You can sign up here: https://github.com/DataTalksClub/data-engineering-zoomcamp/
-```
-
-### Example post for Twitter/X
-
-```
-📊 Module 5 of Data Engineering Zoomcamp done!
-
-- Data Platforms with Bruin
-- End-to-end ELT pipelines
-- Data quality & lineage
-- Deployment to BigQuery
-
-My solution: <LINK>
-
-Free course by @DataTalksClub: https://github.com/DataTalksClub/data-engineering-zoomcamp/
-```
+- `--full-refresh`
